@@ -2,12 +2,12 @@ Package: Mapinguari
 Type: Package
 Title: What the Package Does (Title Case)
 Version: 0.1.0
-Author: Who wrote it
-Maintainer: The package maintainer <yourself@somewhere.net>
+Author: Gabriel Caetano, Juan Santos, Barry Sinervo
+Maintainer: Gabriel Caetano <gabrielhoc@gmail.com>, Juan Santos <Juan's email>
 Description: More about what it does (maybe more than one line)
     Use four spaces when indenting paragraphs within the Description.
 License: What license is it under?
 Encoding: UTF-8
 LazyData: true
-URL: http://github.com/gabrielhoc/Mapinguari
-BugReports: http://github.com/gabrielhoc/Mapinguari/issues
+URL: http://github.com/gabrielhoc/Mapinguari-development
+BugReports: http://github.com/gabrielhoc/Mapinguari-development/issues
