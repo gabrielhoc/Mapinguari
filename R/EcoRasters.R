@@ -20,9 +20,7 @@ EcoRasters <- function(rasterpath = NULL,
                        projection_model='MP', # future projection model in case future rasters are being downloaded. Default is MPI-ESM-LR
                        resolution,
 
-                       group_by='month', # The rasters outputed can either be left separated by 'month', averaged by 'year' or by 'season', in which case the month when the season begins and ends must be indicated in the two arguments bellow. There will be an average for the season and another for the remaining months (non-season).
-                       StartSeason,
-                       StopSeason,
+                       phenology=c(1,12), # single argument for phenology
 
                        reorder=T # monthly rasters on WorldClim stacks will come in a funny order, due to being arranged by alphabetic, not chronological order. This fixes that, if you are using any stack that is already on the desired order, set this to false.
 
@@ -38,203 +36,86 @@ EcoRasters <- function(rasterpath = NULL,
   # require('stringi')
   # require('EcoHydRology')
 
-  # save current directory
-  # see alternative to changing directories
-
-  master_directory <- getwd()
-
-  # set workspace to output directory. If it doesn't exist, create it
-
-  if (!is.null(out_dir)) {
-
-    if (dir.exists(out_dir) == F) {
-      dir.create(out_dir, showWarnings = F,recursive = T)
-    }
-
-    setwd(out_dir)
-
-  }
-
-  # Select extent by species distribution
-
-  if (!is.null(sp_coord)) {
-
-    ext <- raster::extent((min(sp_coord$Lon) - margin), (max(sp_coord$Lon) + margin), (min(sp_coord$Lat)-margin), (max(sp_coord$Lat) + margin))
-
-  }
-
-  # include variables needed to calculate other variables
-
-  if(is.element('CWD',clim_var)){
-    if(!is.element('PET',clim_var)){
-      clim_var<-c(clim_var,'PET')
-    }
-    if(!is.element('AET',clim_var)){
-      clim_var<-c(clim_var,'AET')
-    }
-  }
-
-  if(is.element('AET',clim_var)){
-    if(!is.element('PET',clim_var)){
-      clim_var<-c(clim_var,'PET')
-    }
-    if(!is.element('prec',clim_var)){
-      clim_var<-c(clim_var,'prec')
-    }
-  }
-
-  if(is.element('PET',clim_var)){
-    if(!is.element('tmin',clim_var)){
-      clim_var<-c(clim_var,'tmin')
-    }
-    if(!is.element('tmax',clim_var)){
-      clim_var<-c(clim_var,'tmax')
-    }
-    if(!is.element('slopeaspect',geo_var)){
-      geo_var<-c(geo_var,'slopeaspect')
-    }
-    if(!is.element('latitude',geo_var)){
-      geo_var<-c(geo_var,'latitude')
-    }
-  }
-
-  if(is.element('solarradiation',clim_var)){
-    if(!is.element('tmin',clim_var)){
-      clim_var<-c(clim_var,'tmin')
-    }
-    if(!is.element('tmax',clim_var)){
-      clim_var<-c(clim_var,'tmax')
-    }
-    if(!is.element('slopeaspect',geo_var)){
-      geo_var<-c(geo_var,'slopeaspect')
-    }
-    if(!is.element('latitude',geo_var)){
-      geo_var<-c(geo_var,'latitude')
-    }
-  }
-
-  if(is.element('slopeaspect',geo_var)){
-    if(!is.element('alt',geo_var)){
-      geo_var<-c(geo_var,'alt')
-    }
-  }
-
-  if(is.element('latitude',geo_var)){
-    if(!is.element('alt',geo_var)){
-      geo_var<-c(geo_var,'alt')
-    }
-  }
-
-  if(is.element('longitude',geo_var)){
-    if(!is.element('alt',geo_var)){
-      geo_var<-c(geo_var,'alt')
-    }
-  }
-
-  if(any(stri_detect_fixed(geo_var,'soil'))){
-    if(!is.element('alt',geo_var)){
-      geo_var<-c(geo_var,'alt')
-    }
-  }
-
   # Create list with combination of climate variables with scenarios and join it with list of geological variables
 
-  if(!is.null(clim_var) & is.null(geo_var)){
+  if (!is.null(clim_var) & is.null(geo_var)) {
 
-    eg<-expand.grid(clim_var, scenarios)
+    eg <- expand.grid(clim_var, scenarios)
     clim_comb <- sprintf('%s_%s', eg[,1], eg[,2])
-    var_list<-clim_comb
-    scenario_list<-paste(eg[,2])
-    var_only_list<-paste(eg[,1])
+    var_list <- clim_comb
+    scenario_list <- paste(eg[,2])
+    var_only_list <- paste(eg[,1])
 
-  } else if(!is.null(geo_var) & is.null(clim_var)){
+  } else if (!is.null(geo_var) & is.null(clim_var)) {
 
-    var_list<-geo_var
-    scenario_list<-rep('constant',length(geo_var))
-    var_only_list<-geo_var
+    var_list <- geo_var
+    scenario_list <- rep('constant', length(geo_var))
+    var_only_list <- geo_var
 
   } else {
 
-    eg<-expand.grid(clim_var, scenarios)
+    eg <- expand.grid(clim_var, scenarios)
     clim_comb <- sprintf('%s_%s', eg[,1], eg[,2])
-    var_list<-c(geo_var,clim_comb)
-    scenario_list<-c(rep('constant',length(geo_var)), paste(eg[,2]))
-    var_only_list<-c(geo_var, paste(eg[,1]))
+    var_list <- c(geo_var, clim_comb)
+    scenario_list <- c(rep('constant', length(geo_var)), paste(eg[,2]))
+    var_only_list <- c(geo_var, paste(eg[,1]))
   }
 
-  unique_climate_scenarios<-unique(scenarios)
+  unique_climate_scenarios <- unique(scenarios)
 
   # Identify if the user has provided a path to a folder or a raster in the workspace for any variable
 
-  for(i in 1:length(var_list)){
+  for (i in 1:length(var_list)) {
 
-    if(exists(var_list[i])){
+    if (exists(var_list[i])) {
 
-      eval(parse(text=paste('
+      ifelse(is.character(var_list[i]),
+             assign(paste(var_list[i],'_path'),var_list[i]),
+             assign(paste(var_list[i],'_raster'),var_list[i])
+      )
+    }
+  }
 
-if(is.character(',var_list[i],')){
+  # If rasterpath is supplied, set rasterpath for each variable
 
-        ',var_list[i],'_path<-',var_list[i],'
+  if (!is.null(rasterpath)) {
 
-} else if(class(',var_list[i],')==\'RasterLayer\' | class(',var_list[i],')==\'RasterStack\') {
+    # Paste an extra '/', in case the user has not put one at the end of rasterpath
 
-        ',var_list[i],'_raster<-',var_list[i],'
-}
+    rasterpath<-paste(rasterpath,'/',sep='')
 
-',sep='')))
+    for(i in 1:length(var_list)){
+
+      ifelse(exists(paste(var_list[i],'_path'),
+                    next,
+                    assign(paste(var_list[i],'_path'),
+                           dir(rasterpath,
+                               pattern=paste('^',var_list[i],'_*'),
+                               full.names=T))
+      )
 
     }
-
   }
-
-# If rasterpath is supplied, set rasterpath for each variable
-
-if(!is.null(rasterpath)){
-
-  # Paste an extra '/', in case the user has not put one at the end of rasterpath
-
-  rasterpath<-paste(rasterpath,'/',sep='')
-
-  for(i in 1:length(var_list)){
-
-    eval(parse(text=paste('
-
-if(is.element(\'',var_list[i],'\',var_list) & !exists(\'',var_list[i],'_path\')){
-
-',var_list[i],'_path <- dir(rasterpath, pattern=\'^',var_list[i],'_*\',full.names=T)
-
-}
-
-',sep='')))
-
-  }
-
 }
 
 # Fetch files from directory
 
-for(i in 1:length(var_list)){
+for(i in 1:length(var_list)) {
 
-  eval(parse(text=paste('
+  if(!exists(paste(var_list[i],'_raster') & exists(paste(var_list[i],'_path')){
 
-if(!exists(\'',var_list[i],'_raster\') & exists(\'',var_list[i],'_path\')){
+    assign(paste(var_list[i],'_file'), list.files(path = var_list[i]_path, pattern=c('*.bil$','*.tif$','*.gri$'),full.names=T, ignore.case=T))
 
-',var_list[i],'_file <- list.files(path = ',var_list[i],'_path, pattern=\'*.bil$\',full.names=T, ignore.case=T)
+    cat('\n')
+    cat('------------- Raster file list ------------\n')
+    print(paste(var_list[i]_file))
+    cat('\n')
 
-if(length(',var_list[i],'_file) == 0) {',var_list[i],'_file <- list.files(path = ',var_list[i],'_path, pattern=\'*.tif$\',full.names=T, ignore.case=T)}
-if(length(',var_list[i],'_file) == 0) {',var_list[i],'_file <- list.files(path = ',var_list[i],'_path, pattern=\'*.gri$\',full.names=T, ignore.case=T)}
+    var_list[i]_raster <- suppressMessages(raster::stack(var_list[i]_file))
 
-cat(\'\n\')
-cat(\'------------- Raster file list ------------\n\')
-print(',var_list[i],'_file)
-cat(\'\n\')
-
-',var_list[i],'_raster <- suppressMessages(stack(',var_list[i],'_file))
+  }
 
 }
-
-',sep='')))
-
 }
 
 # Download missing rasters
@@ -363,6 +244,12 @@ if(any(stri_detect_fixed(var_list,'soil'))){
 }
 
 ################################     CROP RASTERS     #################################
+
+# Select extent by species distribution
+
+if (!is.null(sp_coord)) {
+  ext <- raster::extent((min(sp_coord$Lon) - margin), (max(sp_coord$Lon) + margin), (min(sp_coord$Lat) - margin), (max(sp_coord$Lat) + margin))
+}
 
 for(i in 1:length(var_list)){
 
