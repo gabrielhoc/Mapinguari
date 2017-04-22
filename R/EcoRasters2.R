@@ -1,22 +1,23 @@
-EcoRasters2 <- function(non_fixed_var = c("tmax","tmin"),
-                        fixed_var = "altitude",
-                        years = c("present", "2050"),
+EcoRasters2 <- function(rasters,
+                        non_fixed_var,
+                        fixed_var,
+                        years,
+                        scenarios,
                         baseline = c("present", "baseline"), # years not subject to scenarios
-                        scenarios = "rcp26",
                         separator = "_"
 ) {
 
   # Identifies which years have different scenarios, creates combinations of those years and scenarios, and append years that don't have scenarios.
 
-  years_scenario<-
+  years_scenario <-
     setdiff(years, baseline) %>%
-    outer(scenarios, paste, sep=separator) %>%
+    outer(scenarios, paste, sep = separator) %>%
     c(intersect(years, baseline))
 
   # Creates combinations of non-fixed variables and year/scenarios and append fixed variables.
 
-  var_list<-
-    outer(non_fixed_var, years_scenario, paste, sep=separator) %>%
+  var_list <-
+    outer(non_fixed_var, years_scenario, paste, sep = separator) %>%
     as.vector() %>%
     c(fixed_var)
 
@@ -33,7 +34,7 @@ EcoRasters2 <- function(non_fixed_var = c("tmax","tmin"),
                                 rasters[.] %>%
                                 stack()
                             },
-                            error=NA)
+                            error = NA)
 
                           }
                           )
@@ -46,10 +47,10 @@ EcoRasters2 <- function(non_fixed_var = c("tmax","tmin"),
                               rasters %>%
                                 stringr::str_subset(var_list[i]) %>%
                                 rasters[.] %>%
-                                list.files(pattern=c('*.bil$','*.tif$','*.gri$'),full.names=T, ignore.case=T) %>%
+                                list.files(pattern = c('*.bil$','*.tif$','*.gri$'),full.names=T, ignore.case=T) %>%
                                 stack()
                             },
-                            error=NA)
+                            error = NA)
 
                           }
                           )
@@ -59,11 +60,11 @@ EcoRasters2 <- function(non_fixed_var = c("tmax","tmin"),
                           lapply(1:length(var_list), function(i){
 
                             tryCatch({
-                              list.dirs(rasters, pattern=var_list[i]) %>%
-                                list.files(pattern=c('*.bil$','*.tif$','*.gri$'),full.names=T, ignore.case=T) %>%
+                              list.dirs(rasters, pattern = var_list[i]) %>%
+                                list.files(pattern = c('*.bil$','*.tif$','*.gri$'),full.names=T, ignore.case=T) %>%
                                 stack()
                             },
-                            error=NA)
+                            error = NA)
 
                           }
                           )
@@ -71,6 +72,6 @@ EcoRasters2 <- function(non_fixed_var = c("tmax","tmin"),
                         }
   )
 
-  names(raster_list)<-var_list
+  names(raster_list) <- var_list
 
 }
