@@ -1,6 +1,52 @@
+#' Retrieve and organize spatial environmental information.
+#'
+#' \code{Ecology} returns an organized list of environmental rasters.
+#'
+#' @param raster_source character or list of RasterStack. You can either input a path to a folder with the required rasters or a list of RasterStack organized by year/scenario.
+#' @param ext Extent object or dataframe with coordinates. Extension to crop rasters. You can either input an extent object or a table of coordinates, in which case, the points further in each direction will determine the extent for cropping.
+#' @param margin numeric. Additional distance to be added to the extent, in degrees.
+#' @param resolution numeric. Spatial resolution of rasters, in degrees.
+#' @param non_fixed_var character vector. Names of the time varying variables to be outputed.
+#' @param fixed_var character vector. Names of the time fixed variables to be outputed.
+#' @param years character vector. Names of years for time varying variables.
+#' @param scenarios character vector. Names of future scenarios to for time varying variables.
+#' @param baseline character vector. Names of years not subject to scenarios.
+#' @param separator character. Character that separates variable names, years and scenarios.
+#' @param projection_model character. Projection model for future variables. Must be any model accepted in \code{raster::getData}
+#' @param download logical. Should missing variables that can be downloaded be downloaded?
+#' @param derive logical. Should missing variables that can be derived be derived?
+#' @param StartSeason numerical. Month of start of a phenological event.
+#' @param StopSeason numerical. Month of end of a phenological event.
+#' @param phenology character. Either 'month', 'year' or 'season'. 'month' will keep rasters that vary by month as they are, 'year' will average all months, 'season' will average inside and outside month range determined by 'StartSeason' and 'StopSeason'.
+#' @param reorder logical. If TRUE, will use last two characters of layer names in RasterStacks with 12 layers to order them in ascending order.
+#'
+#' @return Returns a list of raster stacks for the variables required, organized by year/scenario combination.
+#'
+#' @examples
+#' FulanusEcoRasters_month <-
+#'EcoRasters2(raster_source = "./global_grids_10_minutes/",
+#'  ext = dist,
+#'  non_fixed_var = c('prec', 'tmin', 'tmax'),
+#'  fixed_var = 'alt',
+#'  years = c("present", '2050', '2070'),
+#'  scenarios = c('rcp26', 'rcp45', 'rcp85'),
+#'  phenology = 'month',
+#'  reorder = T)
+
+#'FulanusEcoRasters_season <-
+#'  EcoRasters2(raster_source = "./global_grids_10_minutes/",
+#'    ext = dist,
+#'    non_fixed_var = c('prec', 'tmin', 'tmax', 'PET', 'AET', 'CWD'),
+#'    fixed_var = 'alt',
+#'    years = c("present", '2050', '2070'),
+#'    scenarios = c('rcp26', 'rcp45', 'rcp85'),
+#'    phenology = 'season',
+#'    StartSeason = 3,
+#'    StopSeason = 8,
+#'    derive = T)
 #'
 
-EcoRasters2 <- function(raster_source,
+Environment <- function(raster_source,
   ext = raster::extent(-180, 180, -60, 90),
   margin = 0,
   resolution = 10,
@@ -17,7 +63,6 @@ EcoRasters2 <- function(raster_source,
   StopSeason,
   phenology = 'month',
   reorder = FALSE
-
 ) {
 
   # variable aliases

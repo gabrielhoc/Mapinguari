@@ -1,0 +1,242 @@
+---
+title: "Mapinguari (or ProcessSDM, or SDMProcess, or pSDM, or SDMp)"
+author: "Gabriel Caetano, Juan Santos, Barry Sinervo"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Mapinguari}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+**This is a theoretical description of the package from my thesis proposal, I will update it and add examples**
+
+# Package name: 
+
+Mapinguari (from Tupi mbaé-pi-guari, meaning thing with crooked feet [41]), is a folkloric beast present in many Amazonian Amerindian cultures, much like a South American bigfoot. It is believed that the myth originates from contact of those cultures with not so ancient South American megafauna, particularly giant ground sloths (Mammalia, Pilosa). In fact, in the Karitiana culture, the beast is known as O’i ty, literally, giant sloth [42]. The package core functions are derived from early functions sets used by Sinervo, named “PolarBear” [3], and later “SunBear” [43]. During a field trip to Brazil, Barry Sinervo from University of Santa Cruz California, Guarino Colli and Reuber Brandão from University of Brasília, shared stories about the Mapinguari and their paleotocas (preserved ancient burrows), and also created a new dance move, “the Mapinguari”, making the beast symbol of the collaboration between the two universities. Thus, I decided to name the package in homage to that collaboration and also to continue the tradition of naming programs after large furry animals. The package authors are: Gabriel Caetano, Juan Santos and Barry Sinervo.
+
+Mapinguari has tools that help addressing all six biological processes proposed by Urban [17], although some in indirect ways. In early development, the package was focused on physiology only, therefore, that is the most developed part; but since then it has expanded to other mechanisms due to user demand. I will keep adding new features on future versions to more realistic model those processes. Here, I briefly overview ways Mapinguari can be used to include each process in a species distribution model, with more detailed explanation on the methods on the next section, on functions descriptions.
+
+**Physiology**: The package offers two ways to model thermal physiology: Hours Above Threshold (HAT) and Thermal Performance Curves (TPC). HAT methods estimate the daily hours an organism experience above a threshold value of a variable, typically temperature. To calculate hours inside a variable range, instead of above a threshold, one can simply model two thresholds and subtract the hours above the higher threshold from the hours above the lower threshold. Although methods on the package were originally designed to model ectotherms’ potential activity time, they can be used for any process with relevant temperature thresholds, such as endotherms thermal neutral zones and seed or egg development. Also, hours of activity might be useful for energy budget models [15, 44]. TPCs offer a way to directly measure the effects of temperature in organismal fitness [45–47]. They relate a measure of performance (running speed, metabolic rate) to temperature variation, and can include any other covariate influencing performance, such as body hydration and acclimation temperature. The covariates will only be useful for distribution modeling if you have spatial information on them, though.
+
+**Dispersal**: Mapinguari offers a simple algorithm for a dispersal model with homogeneous vagility across range. 
+
+**Species interaction**: Even though the package does not contain specific functions to deal with species interaction, we suggest ways to use existing functions to account for that mechanism: physiological projections of one species can be used as predictors for the distribution of an interacting species; hours of activity estimations can be used to model predator consumption rate or prey nutritional quality; phenology functions can be used to predict phenological asynchronies between mutualistic species [48].
+
+**Demography**: In chapter 2, I exemplify how to use mark and recapture data to integrate demography on projections. The phenology functions can be used in life history models, and hours of activity data can be used on energy budget models to estimate fecundity.
+
+**Evolution**: Locally adapted physiology can be accounted for by merging population-specific predictors using function MergeRasters, as I exemplify in chapter 3.
+	
+**Responses to environmental variation**: Hours of activity estimations address a behavioral response to environmental variation. TPCs can be fitted with acclimation temperature, and function EcoPhysRasters provides an appropriate model to account for the temporal displacement in the influence of current temperature and acclimation temperature. 
+
+Tools from Mapinguari may also be used on contexts other than spatial analysis. For example, on chapter 2, I apply the Hat and TPC functions (HATmodel and PerfGAMM) to time series that are used on a demographic model.
+The three guidelines for the development of this package were accessibility, flexibility and rigor. That is, I want to make a tool that a lot of people can use, is able to handle many different kinds of data sets and that offers the user everything they need to make a rigorous analysis.
+Process based models are usually very data intensive, and that data can take a long time to collect. Because of this, they might be inaccessible for data deficient taxa or researchers who don’t have a lot of time (such as masters students) or resources to collect that data. With that in mind, Mapinguari offers the flexibility to create process-based predictors using either very simple or very comprehensive data sets. The user can build a model using a complete data set like I exemplify on chapter 2, in which I include operative temperatures, thermal performance estimations, demographic data, phenology and dispersal; or build a model with very little process data, for example, only threshold temperatures for activity, which can be estimated using published data. To increase accessibility, I made sure that all non species-specific data necessary for the functions in the package are available for free online. Mapinguari uses the WorldClim [49] and ISRC World Soil Reference [50] open databases, but it is flexible enough to allow any analogous raster. 
+
+While working with different collaborators and students with different levels of knowledge, including a workshop on mechanistic modeling I taught with Juan Santos in Palmas, Brazil, 2016, I noticed that functions built around input data are more intuitive for most users. I tried to apply that principle whenever I could, that is why some functions have multiple utilities for the same kind of input data. For example, the OccurPoints function detailed bellow can be used to spatially rarify occurrence records or construct pseudoabsence sets, two unrelated tasks that share the same input.
+
+Species distribution models are very sensitive to assumptions and generate a lot of varying predictions [30, 51, 52]. Overlooked common pitfalls on SDMs are: biased or auto correlated occurrence records, inadequate or collinear predictors, inadequate model evaluations and result misinterpretation [6] . Guidelines for the correct use of SDMs are reviewed on [53] . Mapinguari will offer tools to deal with many of those issues, and the manual will recommend and demonstrate good practices in other issues such as choice of predictors.
+
+# Package description
+
+I am going to build an R package, following the guidelines of Leisch [54] and write a comprehensive manual for it. The package is going to be updated to CRAN (Comprehensive R Archive Network), so it will be open source and available for free to anyone. Below is the description of the functions and capabilities of the package. Many functions are tools of convenience; most of the process modeling is in function EcoPhysRaster, which outputs species-specific spatial predictors.
+
+## OcurrPoints
+
+This function processes occurrence data. It can remove all points on the ocean (for terrestrial animals) or land (for marine animals); rarefy points based on radial distance or raster grids. The function will also compute autocorrelation indexes such as Moran’s I [55] and Geary’s C [56], and plot points for visual assessment of record bias. It also offers an option to split the data a priori, so it can be used for model validation. It allows the user to download distribution records for vertebrates from the VertNet database, more databases will be added in future versions. You can also generate random pseudoabsence points from occurrence records: either between a minimum and maximum radial distance from occurrence points, inside a minimum convex polygon of occurrence records, or a combination of both techniques.
+
+## PerfGAMM
+
+This function fits General Additive Mixed Models (GAMM) of performance data against environmental data, with automatic selection from multiple correlation structures for autocorrelated measures, which are common in TPCs (i. e. individuals doing multiple trials). The most immediate use of this function is to fit TPCs, but it could be used for variables other than temperature. The user can also add other covariates to the model, which can be dependent on environment (hydration state, acclimation temperature) or not (sex, size, morphotype, lineage). Once this model is fitted, it can be supplied to function EcoPhysRasters to transform spatially explicit environmental data into a surface of performance estimations. In order to account for geographical variation in environment dependent covariates in the model, the user needs to supply spatial information on that variable. Acclimation temperature is a special case, due to temporal displacement on the influence of the covariate. That issue is handled in function EcoPhysRaster when it is doing the spatial extrapolation of TPCs, and the exact mechanisms is described below, under EcoPhysRaster.
+
+## HATmodel
+
+To create a model of how hours above threshold (Hat) varies in relation to air temperature (Ta) in a specific kind of habitat, we estimate the parameters of a generalized logistic curve (Richards curve) by maximum likelihood, parameterized as follows:
+
+*H_at=Asym/〖(1 + K `*` e^(-Infl `*` T_a ))〗^(1/M)*
+
+**Eq. 1 – Parameterization of Richards curve relating hours above threshold (Hat) to air temperature (Ta). K is the slope, Infl is the inflection point, Asym is the asymptote and M is the shape parameter.**
+
+This parameterization constrains Hat between 0 and the asymptote (Asym). HATmodel offers default primers for coefficients, but the user can change them. The default probability density function is an exponential, since it continuous and strictly positive. The default primer used for Asym is day length, for Infl is half day length, for K is the slope of a linear regression between Hat and Ta, for M is 1. This function can then be inputted in EcoPhysRasters for spatial extrapolation of the model.
+
+## PHENmodel
+
+This function allows the user to model the timing and duration of life history events, according to environmental constraints. It can create three different types of model: first, a logistic GLM that models if the species is currently experiencing the event or not, given immediate environmental conditions; second, a logistic GLM that models if the event has started or not, given environmental conditions, and estimate the end date by summing the average event duration from fitting data to the beginning date; and a third model that is similar to the second, but instead of using average event duration, defines duration as a user specified function of the conditions during the event. The first model should be useful to model responses like estivation or dormancy, which beginning and end are triggered by the same stimulus. The second model should be useful for events that are triggered by an environmental cue, but end for another reason, such as breeding seasons. The third model should be useful to model events that are triggered by an environmental cue and the duration of the event is also determined by the environment, like temperature dependent larval development.
+	
+## EcoRasters
+
+This function is similar to EcoPhysRasters, but creates or manipulates non species-specific rasters instead. It allows the user to download every raster necessary to calculate the derived variables on this function and on EcoPhysRasters. However, any other raster can be loaded on this function to make use of its utilities (for cropping or phenological partitioning). 
+
+**Downloadable variables**: Mapinguari can download georeferenced environmental layers from two open sources, WorldClim and ISRC World Soil Reference, and automatically streamline those layers in its calculations. WorldClim includes an altitude layer, 7 climatic and 19 bioclimatic layers in 4 different resolutions (10 minutes, 5 minutes, 2.5 minutes and 30 seconds). ISRC World Soil Reference includes 295 layers for soil features and composition. The very long list of ISRC World Soil Reference layers and their description can be found in their website [50]. EcoRasters can resample those layers to a user-defined resolution.
+
+**Derived variables**: These variables can be calculated using the downloadable variables, but also from user supplied rasters. Here is a list of variables and description of how they are derived:
+	*Potential EvapoTranspiration (PET)*: the amount of water in meters that would evaporate from soil and transpire from plants if infinite water was available. It is used in the calculation of Climatic Water Deficit and other aridity indexes. Calculated by the Priestley-Taylor equation [57] implemented from package EcoHydRology [58].
+	*Actual EvapoTranspiration (AET)*: the amount of water in meters that actually evaporates from soil and transpires from plants, given water supply limitations. It is correlated with plant distribution [59] and diversity [60]. Calculated using Duncan Golicher’s model [61].
+	*Climatic Water Deficit (CWD)*: the evaporative demand that exceeds water availability, in meters. It is an estimation of water stress and is correlated to the distribution of vegetation types [59] and is calculated by subtracting AET from PET.
+*Relative Humidity*: the ratio between the amount of water present in the air and the amount necessary for saturation. Calculated by the equation below, modified from classic Tetens equation [62] to account for different units:
+
+*RH=Pw/(0.611 `*`〖10〗^((7.5 `*` T_a)/(237.3 + T_a )) )`*` 100%*
+	
+**Eq. 2 – Modified Tetens’ equation- RH is relative humidity, Pw is water vapor pressure in kPa and Ta is air temperature in degrees Celsius.**
+
+*Solar Radiation*: the amount of energy from sunrays reaching ground surface, in kilo Joules per square meter per day. This variable can either be calculated using the equation from Walter [63], implemented on package EcoHydRology, or it can be downloaded from WorldClim. However, WorldClim currently only has this variable for the baseline period (1960-2000).
+*Hours of sunlight*: amount of time in hours between sunrise and sunset in each location. This is calculated using Foresters’ implementation of Teets’ method [64, 65]. It is useful for phenological partitioning and for capping hours of activity estimations.
+*Slope and aspect*: slope is the ratio between adjacent altitudes (Queen’s case) and aspect is the direction of that slope is facing, in radians. Calculated by Horn’s method [66] implemented in package raster [67]. Topography is an important influence on microclimates [68](Morelli, 2016), and might be a limiting environmental feature for some species.
+
+EcoRasters also offers some utilities applicable to any raster:
+Raster cropping: the function offers the possibility of cropping rasters with a margin around distribution records, which is useful for limiting the modeling to relevant areas.
+
+**Phenological partitioning**: this feature allows users to partition monthly rasters of any variable into seasons of the year, using different criteria. The user can directly inform the months of beginning and end of seasons or they might inform thresholds for variables that will determine those seasons. Alternatively, they can inform a model, such as the ones fitted on function PHENmodel, and as such, the seasons for each location will be determined by the combination of variables on that model. Using thresholds or PHENmodel to define seasons will allow the user to account for phenological shifts in time or space. Otherwise, rasters can be averaged by year or left with their monthly values. If using thresholds or PHENmodel, a raster with the number of days in a season for each location can be created, since this might be an interesting predictor for some species (duration of hibernation or larval period).
+This feature is very important to model the effects of climatic variables on important life history events, such as reproductive seasons, larval development periods, flowering seasons, migration periods. The options to include phenological shifts add more realism and allow modeling for phenological mismatches between interacting species.
+
+## EcoPhysRasters
+
+This is the core function in the package, it creates or manipulates species-specific rasters. It offers the same utilities as EcoRasters (cropping and phenological partitioning). It requires input of species-specific information, such as the models generated from the PerfGAMM and HATModel functions detailed above, or temperature threshold values for the Sinusoid calculation of Hat, detailed bellow.
+
+**Performance**: this variable is the spatial predictions of the GAMM model outputted by function PerfGAMM, however, any temperature dependent model will work. PerfGAMM will admit any covariate, but EcoPhysRasters will only be able to account for geographical variation on those covariates if the user supplies rasters for them, otherwise they will have to supply a fixed value. EcoPhysRasters uses a special method for acclimation temperature as a covariate in PerfGAMM, because the temperature the animal has acclimated to in the past might not be the same temperature it is currently performing on.
+On performance trials with animals acclimated to different temperatures, they are usually left in an environment until they acclimate and then immediately transported to the trial environment, where they perform in other temperatures. In nature, however, organisms will experience constant temperature change between the time they start acclimating and the time they are performing. This is accounted for in the model described below.
+
+I modified a model created by Barry Sinervo (pers. comm.) to make it generalized for any time period. It averages TPCs’ predictions for the temperatures experienced by the organism in an area during acclimation period, counting back from middle month, weighted by the proportion of time spent at each temperature (discrete temperature series, usually with monthly resolution).
+
+*If 0 < a ≤ 0.5:*
+*P = f_GAMM(T_m, T_m)*
+
+*If 0.5 < a ≤ 1.5:*
+*P = (0.5 `*` f_GAMM(T_m, T_m) + (a - 0.5) `*` f_GAMM(T_m, T_(m - 1)))/a*
+
+*If 1.5 < a ≤ 2.5:*
+*P = (0.5 `*` f_GAMM(T_m, T_m) + f_GAMM(T_m, T_(m - 1)) + (a - 1.5) `*` f_GAMM(T_m, T_(m - 2)))/a*
+
+*If a > 2.5:*
+*P = (0.5 `*` f_GAMM(T_m, T_m) + f_GAMM(T_m, T_(m - 1)) + ⋯ + f_GAMM(T_m, T_(m - ⌈ a -1.5 ⌉)) + (a + 0.5 - ⌊a + 0.5⌋) `*` f_GAMM(T_m, T_(m - ⌈a - 0.5 ⌉)))/a*
+
+**Eq. 3 – Performance (P) with acclimation calculations.  fGAMM is a GAMM function for a thermal performance curve with acclimation temperature as a covariate. The first term on fGAMM  is current temperature and the second term is acclimation temperature. Tm is the temperature in month m and a is acclimation time, how long it takes for the organism to acclimate to a new condition. A 0.5 corrector is used to account for time being counted back starting from mid current month. The ⌈ ⌉ symbol represents a ceiling function (round up to an integer) and the ⌊ ⌋ symbol represents a floor function (round down to an integer).**
+							 
+**Hours above threshold**: this can be calculated either by using the model outputted from HATmodel or by making a sinusoid approximation of daily temperature variation and then counting the number of hours when temperature is above the threshold.
+
+The first method simply uses the model from HATmodel and returns the predicted value for each location. This accounts for microclimates, since HATmodel can use operative temperatures measured in different microhabitats; but it might not be generalizable for phytophisiognomies different from the one where operative temperatures were taken. A solution is to use function MergeRasters described below to combine predictions from different HATmodels, according to vegetation type.
+
+In the absence of operative temperature data or if assuming the organism temperature will closely track air temperature, hours above threshold can be counted from a sinusoid approximation of daily variation in temperature. Alternatively, the air temperature rasters necessary for the sinusoid approximation can be replaced with operative temperature rasters, if spatial estimates of operative temperatures are available. This is the method used by Sinervo in 2010 [3].
+
+*H_at = ∑_(h = 1)^(daylength)▒∑_(s = 1)^res▒f(T_max, T_min, T_(thr), h, s)* 
+
+*f(T_max, T_min, T_(thr,)h, s){█(1/res, ((T_max) - (T_min ))/2 `*` sin(π/12 `*` (h + s/res) - 3 `*` π/4) + ((T_max) + (T_min))/2>T_(thr)@0, ((T_max) - (T_min))/2 `*` sin(π/12 * (h + s/res) - 3 `*` π/4) + ((T_max) + (T_min))/2≤T_(thr))┤*
+
+**Eq. 4 – Calculation of hours above threshold (Hat) using a sinusoid approximation of daily temperature variation. Tthr is the temperature threshold of interest; Tmax is the maximum air temperature at the site at a particular time interval (usually month); Tmin is the minimum air temperature at a particular time interval (usually month); daylength is the number of hours in a day (or night) at the site at a particular time interval (usually month); h is an index for hours, ranging from 1 to daylength; s is an index for fractions of an hour with resolution res, ranging from 1 to res.**
+
+## MergeRasters
+
+This function allows merging two different rasters following a rule. The user can define polygons from coordinates as a merging rule, retaining the values of one raster inside the polygon and the values of the other raster outside. Alternatively, the rule can be another raster, such as a discrete raster detailing the distribution of a type of vegetation, or a continuous raster of some variable such as Climatic Water Deficit (which is correlated to vegetation distribution) with a threshold for when the value of one raster should be retained over the other. These rules might be useful, for example, for merging two different hours of activity rasters to account for difference in operative temperatures in two types of vegetation, or to merge two performance rasters to account for local adaptation on a species physiology. The merging rule can also be characteristics of the rasters to be merged, such as which raster has the highest value for each cell. This might be useful, for example, for merging probability of occurrence rasters of different species, so the output would be which species has the higher probability of occurrence in each site. If the user has a time series or geographical records of competitive outcomes for two species, they might derive a correction factor and apply it to rasters of probability of occurrence or some environmental variable influencing competition, which might in turn be used on MergeRasters to map which species prevails in competition at each location.
+
+## CollinearityTests
+
+This function offers several tests to verify collinearity between spatial predictor and select a set of variables with lower collinearity: a simple pairwise correlation test, that eliminates variables with correlation above a user specified threshold, multiple regression techniques to choose the least correlated set of variables (Random Forest and Gradient Boosting Machine), Principal Components Analysis to eliminate variables that add little variance to components, and a Variance Inflation Factor stepwise procedure, which excludes variables that inflate the variance, by an user specified amount, of the multiple correlation coefficient of a regression between one variable and the other variables in the set.
+
+## PlotRasters
+
+This function offers an easy way to plot maps with country, state/province or municipalities’ borders, occurrence points and a color palette with legends. It also delineates the species distribution after a user specified occurrence probability threshold.
+
+## CompareRasters
+
+This function compares rasters and calculates the amount of area gained or lost and range shift, if a threshold for range is applied.
+
+## ModelEval
+
+This function offers performance and validation statistics for SDMs. Sensitivity, specificity, model performance [69], AUC and Cohen’s kappa. I am not implementing jackknifing, bootstrapping and k-fold validation because those methods are very computationally intensive and can be easily applied from already existing packages, so I saw little value in developing wrappers for those, but I will include a tutorial on those techniques in the package manual.
+
+## SpeciesDispersal
+
+This function implements a simple algorithm simulating the dispersal of a species across time, assuming homogeneous vagility across species range. The user will supply a table of coordinates for the species distribution at time step 0, or a occurrence probability raster with a specified threshold for occupancy, in which case the function will create a table with coordinates of points above threshold; supply the distance the species can disperse in one time step; a number of time steps; a threshold value for settlement at a location and a list with the same number of rasters as time steps. The function will generate circles of radius equal to the dispersal distance around each coordinate of the species distribution at time step 0, then add to the coordinate table any raster cell within those circles that has a value above threshold on the first raster of the list, as well as drop any cell below threshold. This procedure will be repeated for the subsequent rasters on the list for the number of time steps informed.
+
+I hope to make this function more realistic in future versions, including condition dependent dispersal probability and better account for terrain and dispersal barriers.
+
+```{r, eval = FALSE}
+
+FulanusEcoRasters_month <-
+  EcoRasters2(raster_source = "./global_grids_10_minutes/",
+    ext = dist,
+    non_fixed_var = c('prec', 'tmin', 'tmax'),
+    fixed_var = 'alt',
+    years = c("present", '2050', '2070'),
+    scenarios = c('rcp26', 'rcp45', 'rcp85'),
+    phenology = 'month',
+    reorder = T)
+
+FulanusEcoRasters_season <-
+  EcoRasters2(raster_source = "./global_grids_10_minutes/",
+    ext = dist,
+    non_fixed_var = c('prec', 'tmin', 'tmax', 'PET', 'AET', 'CWD'),
+    fixed_var = 'alt',
+    years = c("present", '2050', '2070'),
+    scenarios = c('rcp26', 'rcp45', 'rcp85'),
+    phenology = 'season',
+    StartSeason = 3,
+    StopSeason = 8,
+    derive = T)
+
+perf <- read.table(file = "./data/FulanusPerformance.txt", header = TRUE)
+
+perf_functions <-
+  PerfFUN(formula = performance ~ s(temp, bs = 'cs') + size,
+    data = perf,
+    type = 'GAMM',
+    random = list(id = ~ 1)
+  )
+
+Perf_rasters <-
+Perf_rasters(raster_source = FulanusEcoRasters,
+  Perf_args = list(temp = 'tmax', size = 10),
+  separator = '_',
+  PerfFUN = perf_functions$predict$model_1)
+
+PhenFUN <- function(x) 1/(1 + exp((26 - x)/2))
+
+```
+
+Vignettes are long form documentation commonly included in packages. Because they are part of the distribution of the package, they need to be as compact as possible. The `html_vignette` output type provides a custom style sheet (and tweaks some options) to ensure that the resulting html is as small as possible. The `html_vignette` format:
+
+- Never uses retina figures
+- Has a smaller default figure size
+- Uses a custom CSS stylesheet instead of the default Twitter Bootstrap style
+
+## Vignette Info
+
+Note the various macros within the `vignette` section of the metadata block above. These are required in order to instruct R how to build the vignette. Note that you should change the `title` field and the `\VignetteIndexEntry` to match the title of your vignette.
+
+## Styles
+
+The `html_vignette` template includes a basic CSS theme. To override this theme you can specify your own CSS in the document metadata as follows:
+
+    output: 
+      rmarkdown::html_vignette:
+        css: mystyles.css
+
+## Figures
+
+The figure sizes have been customised so that you can easily put two images side-by-side. 
+
+```{r, fig.show='hold'}
+plot(1:10)
+plot(10:1)
+```
+
+You can enable figure captions by `fig_caption: yes` in YAML:
+
+    output:
+      rmarkdown::html_vignette:
+        fig_caption: yes
+
+Then you can use the chunk option `fig.cap = "Your figure caption."` in **knitr**.
+
+## More Examples
+
+You can write math expressions, e.g. $Y = X\beta + \epsilon$, footnotes^[A footnote here.], and tables, e.g. using `knitr::kable()`.
+
+```{r, echo=FALSE, results='asis'}
+knitr::kable(head(mtcars, 10))
+```
+
+Also a quote using `>`:
+
+> "He who gives up [code] safety for [code] speed deserves neither."
+([via](https://twitter.com/hadleywickham/status/504368538874703872))
