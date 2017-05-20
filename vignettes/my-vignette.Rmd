@@ -152,6 +152,8 @@ I hope to make this function more realistic in future versions, including condit
 
 ```{r, eval = FALSE}
 
+devtools::install_github("gabrielhoc/Mapinguari-development", auth_token = "2efd9f29b6fff9888d580e1e8d85dba3a3cc594a")
+
 FulanusEcoRasters_month <-
   EcoRasters2(raster_source = "./global_grids_10_minutes/",
     ext = dist,

@@ -32,7 +32,7 @@
 #'  scenarios = c('rcp26', 'rcp45', 'rcp85'),
 #'  phenology = 'month',
 #'  reorder = T)
-
+#'
 #'FulanusEcoRasters_season <-
 #'  EcoRasters2(raster_source = "./global_grids_10_minutes/",
 #'    ext = dist,
@@ -46,7 +46,7 @@
 #'    derive = T)
 #'
 
-Environment <- function(raster_source,
+Ecology <- function(raster_source,
   ext = raster::extent(-180, 180, -60, 90),
   margin = 0,
   resolution = 10,
