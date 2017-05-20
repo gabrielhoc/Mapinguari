@@ -5,8 +5,7 @@
 \title{Creates functions relating environment to physiology.}
 \usage{
 Physiology(formula, data, type, fixed = NULL, random = NULL, start = NULL,
-  correlation = NULL, x_axis = NULL, y_axis = NULL, z_axis = NULL,
-  scale = NULL, separator, ...)
+  correlation = NULL, separator, ...)
 }
 \arguments{
 \item{formula}{formula. Model formula.}
@@ -15,7 +14,17 @@ Physiology(formula, data, type, fixed = NULL, random = NULL, start = NULL,
 
 \item{type}{character. Algorithm used for model. 'GAMM' or 'NLME'}
 
-\item{...}{}
+\item{fixed}{named list. See \code{mgcv::gamm}}
+
+\item{random}{named list. See \code{mgcv::gamm} and \code{nlme::nlme}}
+
+\item{start}{named list. See \code{nlme::nlme}}
+
+\item{correlation}{named list. See \code{mgcv::gamm} and \code{nlme::nlme}}
+
+\item{separator}{character. Character that separates variable names, years and scenarios.}
+
+\item{...}{further parameters for \code{mgcv::gamm} or \code{nlme::nlme}}
 }
 \value{
 Returns a list of raster stacks for the variables required, organized by year/scenario combination.
@@ -24,7 +33,6 @@ Returns a list of raster stacks for the variables required, organized by year/sc
 \code{Physiology} Creates functions relating environment to physiology.
 }
 \examples{
-
 perf_functions <-
 Physiology(formula = performance ~ s(temp, bs = 'cs') + size,
  data = FulanusPhysiology,

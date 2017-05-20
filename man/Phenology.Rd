@@ -4,7 +4,8 @@
 \alias{Phenology}
 \title{Groups rasters by duration of phenological event.}
 \usage{
-Phenology(raster_list, PhenFUN, Phen_args)
+Phenology(raster_list, PhenFUN = NULL, Phen_args = NULL, StartSeason = 0,
+  StopSeason = 12)
 }
 \arguments{
 \item{raster_list}{list of RasterStacks. Only accept stacks with 12 layers.}
@@ -12,6 +13,10 @@ Phenology(raster_list, PhenFUN, Phen_args)
 \item{PhenFUN}{function. Function relating phenological event to environmental conditions.}
 
 \item{Phen_args}{named list of strings. Correspondence between PhenFUN arguments and raster names.}
+
+\item{StartSeason}{numerical. Month of start of a phenological event.}
+
+\item{StopSeason}{numerical. Month of end of a phenological event.}
 }
 \value{
 Returns a list of raster stacks for the variables required, organized by year/scenario combination.
@@ -20,5 +25,26 @@ Returns a list of raster stacks for the variables required, organized by year/sc
 \code{Phenology} Groups rasters by duration of phenological event.
 }
 \examples{
+FulanusEcoRasters <-
+  Ecology(
+    raster_source = "/Users/gabriel/Documents/Mapinguari-development/global_grids_10_minutes",
+    ext = FulanusDistribution,
+    non_fixed_var = c('prec', 'tmin', 'tmax'),
+    fixed_var = 'alt',
+    years = c("present", '2050', '2070'),
+    scenarios = c('rcp26', 'rcp45', 'rcp85'),
+    phenology = 'month',
+    reorder = TRUE,
+    separator = "_")
+
+    Phenolohy(FulanusEcoRasters,
+    StartSeason = 4,
+    StopSeason = 11)
+
+   PhenFUN <- function(x) 1/(1 + exp((26 - x)/2))
+
+    Phenolohy(FulanusEcoRasters,
+    PhenFUN,
+    Phen_args = list(x = 'prec'))
 
 }

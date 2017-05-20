@@ -11,7 +11,7 @@ EcoPhysiology(raster_source, Perf_args, separator, PerfFUN)
 
 \item{separator}{character. Character that separates variable names, years and scenarios.}
 
-\item{PerfFUN}{}
+\item{PerfFUN}{function. Function used to modify rasters.}
 }
 \value{
 Returns a list of raster stacks for the variables required, organized by year/scenario combination.
@@ -20,8 +20,11 @@ Returns a list of raster stacks for the variables required, organized by year/sc
 \code{EcoPhysiology} Transform environmental rasters in ecophysiological rasters.
 }
 \examples{
+
+
 FulanusEcoRasters <-
-  Ecology(raster_source = "/Users/gabriel/Documents/Mapinguari-development/global_grids_10_minutes",
+  Ecology(
+    raster_source = "/Users/gabriel/Documents/Mapinguari-development/global_grids_10_minutes",
     ext = FulanusDistribution,
     non_fixed_var = c('prec', 'tmin', 'tmax'),
     fixed_var = 'alt',

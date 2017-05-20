@@ -21,12 +21,15 @@
 #' @param StopSeason numerical. Month of end of a phenological event.
 #' @param phenology character. Either 'month', 'year' or 'season'. 'month' will keep rasters that vary by month as they are, 'year' will average all months, 'season' will average inside and outside month range determined by 'StartSeason' and 'StopSeason'.
 #' @param reorder logical. If TRUE, will use last two characters of layer names in RasterStacks with 12 layers to order them in ascending order.
+#' @param Phen_args named list of strings. Correspondence between PhenFUN arguments and raster names.
+#' @param PhenFUN function. Function relating phenological event to environmental conditions.
 #'
 #' @return Returns a list of raster stacks for the variables required, organized by year/scenario combination.
 #'
 #' @examples
 #' FulanusEcoRasters_month <-
-#'   Ecology(raster_source = "/Users/gabriel/Documents/Mapinguari-development/global_grids_10_minutes",
+#'   Ecology(
+#'     raster_source = "/Users/gabriel/Documents/Mapinguari-development/global_grids_10_minutes",
 #'     ext = FulanusDistribution,
 #'     non_fixed_var = c('prec', 'tmin', 'tmax'),
 #'     fixed_var = 'alt',
@@ -37,7 +40,8 @@
 #'     separator = "_")
 #'
 #' FulanusEcoRasters_season <-
-#'   Ecology(raster_source = "/Users/gabriel/Documents/Mapinguari-development/global_grids_10_minutes/",
+#'   Ecology(
+#'     raster_source = "/Users/gabriel/Documents/Mapinguari-development/global_grids_10_minutes",
 #'     ext = FulanusDistribution,
 #'     non_fixed_var = c('prec', 'tmin', 'tmax', 'PET', 'AET', 'CWD'),
 #'     fixed_var = 'alt',
@@ -64,10 +68,12 @@ Ecology <- function(raster_source,
   projection_model = 'MP',
   download = FALSE,
   derive = FALSE,
-  StartSeason,
-  StopSeason,
+  StartSeason = 0,
+  StopSeason = 12,
   phenology = 'month',
-  reorder = FALSE
+  reorder = FALSE,
+  PhenFUN = NULL,
+  Phen_args = NULL
 ) {
 
   # variable aliases
@@ -313,9 +319,9 @@ Ecology <- function(raster_source,
   }
 
   month_names <-
-  plyr::alply(names(all_rasters_list), 1, function(x){
+  plyr::alply(names(all_rasters_list), 1, function(x, sep_in = separator){
 
-    paste(x, 1:12, sep = separator)
+    paste(x, 1:12, sep = sep_in)
 
   } # close function
     ) # close alply
@@ -324,7 +330,7 @@ Ecology <- function(raster_source,
   plyr::alply(1:length(all_rasters_list), 1, function(i){
 
     is_month <-
-    all_rasters_list[[i]] %>%
+      all_rasters_list[[i]] %>%
       names() %>%
       length() %>%
       `==`(12)
@@ -356,32 +362,58 @@ Ecology <- function(raster_source,
 
   if (phenology == 'year') {
 
-    StartSeason <- 0
-    StopSeason <- 12
+    layer_names <- rep(NA, length(renamed_raster_list))
 
-    raster_phenology <- lapply(renamed_raster_list,
-      Phenology_numerical,
-      StartSeason,
-      StopSeason)
+    raster_phenology <-
+      plyr::alply(1:length(layer_names), 1, function(i) {
 
+        if (length(names(renamed_raster_list[[i]])) != 12) {
+
+          layer_names[i] <<- names(renamed_raster_list)[i]
+
+          return(renamed_raster_list[[i]]) }
+
+        layer_names[i] <<-
+        renamed_raster_list %>%
+          names() %>%
+          `[`(i) %>%
+          paste(., "year", sep = separator)
+
+        year_average <-
+        raster::mean(renamed_raster_list[[i]])
+
+        names(year_average) <- layer_names[i]
+
+        return(year_average)
+      }
+        )
+
+    names(raster_phenology) <- names(renamed_raster_list)
     final_list <- raster_phenology
   }
 
   if (phenology == 'season') {
 
-    raster_phenology <- lapply(renamed_raster_list,
-      Phenology_numerical,
-      StartSeason,
-      StopSeason)
+    .PhenFUN <- PhenFUN
+    .Phen_args <- Phen_args
+    .StartSeason <- StartSeason
+    .StopSeason <- StopSeason
+
+    raster_phenology <- lapply(X = renamed_raster_list,
+      FUN = Phenology,
+      PhenFUN = .PhenFUN,
+      Phen_args = .Phen_args,
+      StartSeason = .StartSeason,
+      StopSeason = .StopSeason)
 
     final_list <-
-      plyr::alply(1:length(raster_phenology), 1, function(i){
+      plyr::alply(1:length(raster_phenology), 1, function(i, sep_in = separator){
 
         if
         (length(names(raster_phenology[[i]])) > 1) {
 
         names(raster_phenology[[i]]) <-
-          paste(names(raster_phenology)[i], names(raster_phenology[[i]]), sep = separator)
+          paste(names(raster_phenology)[i], names(raster_phenology[[i]]), sep = sep_in)
 
         }
 
@@ -459,7 +491,7 @@ FetchStack <- function(vari, raster_stack){
 
     return(input_raster)
 
-  }, error = function(cond){
+  }, error = function(cond, not_found_message){
     message(not_found_message)
     return(NA)
   })
@@ -715,18 +747,18 @@ derive_rasters <- function(missing_vars,
           dplyr::filter(vars == 'PET')
 
         PET_rasters <-
-          plyr::alply(PET_vars, 1, function(x, separator){
+          plyr::alply(PET_vars, 1, function(x, sep_in = separator){
 
             tmax_year_scenario <-
-              paste('tmax', x$year, x$scenario, sep = separator) %>%
+              paste('tmax', x$year, x$scenario, sep = sep_in) %>%
               gsub("_NA", "", .)
 
             tmin_year_scenario <-
-              paste('tmin', x$year, x$scenario, sep = separator) %>%
+              paste('tmin', x$year, x$scenario, sep = sep_in) %>%
               gsub("_NA", "", .)
 
             PET_year_scenario <-
-              paste('PET', x$year, x$scenario, sep = separator) %>%
+              paste('PET', x$year, x$scenario, sep = sep_in) %>%
               gsub("_NA", "", .)
 
             # loop over months, change to lapply
@@ -776,18 +808,18 @@ derive_rasters <- function(missing_vars,
         AET_vars <- dplyr::filter(missing_vars, vars == "AET")
 
         AET_rasters <-
-          plyr::alply(AET_vars, 1, function(x, separator){
+          plyr::alply(AET_vars, 1, function(x, sep_in = separator){
 
             PET_year_scenario <-
-              paste('PET', x$year, x$scenario, sep = separator) %>%
+              paste('PET', x$year, x$scenario, sep = sep_in) %>%
               gsub("_NA", "", .)
 
             prec_year_scenario <-
-              paste('prec', x$year, x$scenario, sep = separator) %>%
+              paste('prec', x$year, x$scenario, sep = sep_in) %>%
               gsub("_NA", "", .)
 
             AET_year_scenario <-
-              paste('PET', x$year, x$scenario, sep = separator) %>%
+              paste('PET', x$year, x$scenario, sep = sep_in) %>%
               gsub("_NA", "", .)
 
             Bucket <- raster::raster(dependencies[[PET_year_scenario]]/100, 1)
@@ -835,14 +867,14 @@ derive_rasters <- function(missing_vars,
         CWD_vars <- dplyr::filter(missing_vars, vars == "CWD")
 
         CWD_rasters <-
-          plyr::alply(CWD_vars, 1, function(x, separator){
+          plyr::alply(CWD_vars, 1, function(x, sep_in = separator){
 
             PET_year_scenario <-
-              paste('PET', x$year, x$scenario, sep = separator) %>%
+              paste('PET', x$year, x$scenario, sep = sep_in) %>%
               gsub("_NA", "", .)
 
             AET_year_scenario <-
-              paste('AET', x$year, x$scenario, sep = separator) %>%
+              paste('AET', x$year, x$scenario, sep = sep_in) %>%
               gsub("_NA", "", .)
 
             CWD_year_scenario <- dependencies[[PET_year_scenario]] - dependencies[[AET_year_scenario]]

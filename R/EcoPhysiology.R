@@ -5,13 +5,16 @@
 #' @param raster_source character or list of RasterStack. You can either input a path to a folder with the required rasters or a list of RasterStack organized by year/scenario.
 #' @param Perf_args
 #' @param separator character. Character that separates variable names, years and scenarios.
-#' @param PerfFUN
+#' @param PerfFUN function. Function used to modify rasters.
 #'
 #' @return Returns a list of raster stacks for the variables required, organized by year/scenario combination.
 #'
 #' @examples
+#'
+#'
 #' FulanusEcoRasters <-
-#'   Ecology(raster_source = "/Users/gabriel/Documents/Mapinguari-development/global_grids_10_minutes",
+#'   Ecology(
+#'     raster_source = "/Users/gabriel/Documents/Mapinguari-development/global_grids_10_minutes",
 #'     ext = FulanusDistribution,
 #'     non_fixed_var = c('prec', 'tmin', 'tmax'),
 #'     fixed_var = 'alt',
@@ -37,7 +40,10 @@
 #'
 #' @export
 
-EcoPhysiology <- function(raster_source, Perf_args, separator, PerfFUN) {
+EcoPhysiology <- function(raster_source,
+  Perf_args,
+  separator,
+  PerfFUN) {
 
     if (class(raster_source[[1]]) == 'RasterStack') {
 

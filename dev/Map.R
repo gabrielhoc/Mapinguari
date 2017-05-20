@@ -1,12 +1,9 @@
-dist <- read.table("./data/FulanusDistribution.txt", h = T)
+Fulanus_bbox <- ggmap::make_bbox(lat = Lat, lon = Lon, data = FulanusDistribution)
 
-bc_bbox <- ggmap::make_bbox(lat = Lat, lon = Lon, data = dist)
-bc_bbox
+Fulanus_big <- ggmap::get_map(location = bc_bbox, source = "google", maptype = "terrain")
 
-bc_big <- ggmap::get_map(location = bc_bbox, source = "google", maptype = "terrain")
-
-ggmap::ggmap(bc_big) +
-  ggplot2::geom_jitter(data = dist, mapping = ggplot2::aes(x = Lon, y = Lat), size = 0.5)
+ggmap::ggmap(Fulanus_big) +
+  ggplot2::geom_jitter(data = FulanusDistribution, mapping = ggplot2::aes(x = Lon, y = Lat), size = 0.5)
 
 library(raster)
 library(ggplot2)

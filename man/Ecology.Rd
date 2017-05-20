@@ -7,8 +7,9 @@
 Ecology(raster_source, ext = raster::extent(-180, 180, -60, 90), margin = 0,
   resolution = 10, non_fixed_var = NA, fixed_var = NA, years = NA,
   scenarios = NA, baseline = c("present", "baseline"), separator = "_",
-  projection_model = "MP", download = FALSE, derive = FALSE, StartSeason,
-  StopSeason, phenology = "month", reorder = FALSE)
+  projection_model = "MP", download = FALSE, derive = FALSE,
+  StartSeason = 0, StopSeason = 12, phenology = "month",
+  reorder = FALSE, PhenFUN = NULL, Phen_args = NULL)
 }
 \arguments{
 \item{raster_source}{character or list of RasterStack. You can either input a path to a folder with the required rasters or a list of RasterStack organized by year/scenario.}
@@ -44,6 +45,10 @@ Ecology(raster_source, ext = raster::extent(-180, 180, -60, 90), margin = 0,
 \item{phenology}{character. Either 'month', 'year' or 'season'. 'month' will keep rasters that vary by month as they are, 'year' will average all months, 'season' will average inside and outside month range determined by 'StartSeason' and 'StopSeason'.}
 
 \item{reorder}{logical. If TRUE, will use last two characters of layer names in RasterStacks with 12 layers to order them in ascending order.}
+
+\item{PhenFUN}{function. Function relating phenological event to environmental conditions.}
+
+\item{Phen_args}{named list of strings. Correspondence between PhenFUN arguments and raster names.}
 }
 \value{
 Returns a list of raster stacks for the variables required, organized by year/scenario combination.
@@ -53,7 +58,8 @@ Returns a list of raster stacks for the variables required, organized by year/sc
 }
 \examples{
 FulanusEcoRasters_month <-
-  Ecology(raster_source = "/Users/gabriel/Documents/Mapinguari-development/global_grids_10_minutes",
+  Ecology(
+    raster_source = "/Users/gabriel/Documents/Mapinguari-development/global_grids_10_minutes",
     ext = FulanusDistribution,
     non_fixed_var = c('prec', 'tmin', 'tmax'),
     fixed_var = 'alt',
@@ -64,7 +70,8 @@ FulanusEcoRasters_month <-
     separator = "_")
 
 FulanusEcoRasters_season <-
-  Ecology(raster_source = "/Users/gabriel/Documents/Mapinguari-development/global_grids_10_minutes/",
+  Ecology(
+    raster_source = "/Users/gabriel/Documents/Mapinguari-development/global_grids_10_minutes",
     ext = FulanusDistribution,
     non_fixed_var = c('prec', 'tmin', 'tmax', 'PET', 'AET', 'CWD'),
     fixed_var = 'alt',

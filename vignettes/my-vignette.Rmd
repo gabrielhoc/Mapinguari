@@ -9,11 +9,74 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-**This is a theoretical description of the package from my thesis proposal, I will update it and add examples**
+# The fate of *Fulanus*
+
+*Fulanus beltranus* is a fictional species of flowering plant from central Africa. We would like to find out how this species is going to do in different climate change scenarios. First let's look at the points where it is currently known to occurr. To access the distribution data, we must load package Mapinguari.
+
+```{r, message = FALSE, warning = FALSE, fig.height = 6, fig.width = 6}
+library(Mapinguari)
+
+Fulanus_bbox <- ggmap::make_bbox(lat = Lat, lon = Lon, data = FulanusDistribution, f = 0.2)
+
+Fulanus_big <- ggmap::get_map(location = Fulanus_bbox, source = "google", maptype = "terrain")
+
+ggmap::ggmap(Fulanus_big) +
+  ggplot2::geom_point(data = FulanusDistribution, mapping = ggplot2::aes(x = Lon, y = Lat), size = 0.5, colour = 'red')
+```
+
+It seems some points are in the ocean! Those must be wrong, let's use Mapinguari's `Distribution` fuction to clean them up.
+
+```{r}
+# insert here point clean up and plot again
+```
+
+How does the climate looks like in this area? We can use function `Ecology` to extract WorldClim surfaces for that area.
+
+```{r}
+FulanusEcoRasters_present <-
+   Ecology(
+     raster_source = "/Users/gabriel/Documents/Mapinguari-development/global_grids_10_minutes",
+     ext = FulanusDistribution,
+     margin = 5,
+     non_fixed_var = c('prec', 'tmin', 'tmax'),
+     fixed_var = 'alt',
+     years = c("present"),
+     phenology = 'year',
+     reorder = TRUE)
+
+raster::plot(FulanusEcoRasters_present[[1]])
+```
+
+Why did I place some variables in the `non-fixed` argument and others in the `fixed` argument? Well, that will become relevant once we start making future projections. Variables on `non_fixed` are things such as climate, which you expect to change in different times and future scenarios, while variables in `fixed` are things such as geological features, which you expect to remain constant accross the time projected.
+
+Let's try doing some projections for the future years of 2050 and 2070:
+```{r}
+FulanusEcoRasters_future <-
+   Ecology(
+     raster_source = "/Users/gabriel/Documents/Mapinguari-development/global_grids_10_minutes",
+     ext = FulanusDistribution,
+     margin = 5,
+     non_fixed_var = c('prec', 'tmin', 'tmax'),
+     years = c('2050', '2070'),
+     scenarios = c('rcp26', 'rcp45', 'rcp85'),
+     phenology = 'year',
+     reorder = TRUE)
+
+raster::plot(raster::stack(
+  FulanusEcoRasters_future$`2050_rcp26`$tmax_2050_rcp26, 
+  FulanusEcoRasters_future$`2050_rcp45`$tmax_2050_rcp45, 
+  FulanusEcoRasters_future$`2050_rcp85`$tmax_2050_rcp85))
+```
+
+image: ![](/Users/gabriel/Documents/Mapinguari-development/man/folder_organization.png)
+
+# Theory
+
+**This is a theoretical description of the package from my thesis proposal, I need to update it**
 
 # Package name: 
 
-Mapinguari (from Tupi mbaé-pi-guari, meaning thing with crooked feet [41]), is a folkloric beast present in many Amazonian Amerindian cultures, much like a South American bigfoot. It is believed that the myth originates from contact of those cultures with not so ancient South American megafauna, particularly giant ground sloths (Mammalia, Pilosa). In fact, in the Karitiana culture, the beast is known as O’i ty, literally, giant sloth [42]. The package core functions are derived from early functions sets used by Sinervo, named “PolarBear” [3], and later “SunBear” [43]. During a field trip to Brazil, Barry Sinervo from University of Santa Cruz California, Guarino Colli and Reuber Brandão from University of Brasília, shared stories about the Mapinguari and their paleotocas (preserved ancient burrows), and also created a new dance move, “the Mapinguari”, making the beast symbol of the collaboration between the two universities. Thus, I decided to name the package in homage to that collaboration and also to continue the tradition of naming programs after large furry animals. The package authors are: Gabriel Caetano, Juan Santos and Barry Sinervo.
+Mapinguari (from Tupi *mbaé-pi-guari*, meaning thing with crooked feet [41]), is a folkloric beast present in many Amazonian Amerindian cultures, much like a South American bigfoot. It is believed that the myth originates from contact of those cultures with not so ancient South American megafauna, particularly giant ground sloths (Mammalia, Pilosa). In fact, in the Karitiana culture, the beast is known as O’i ty, literally, giant sloth [42]. The package core functions are derived from early functions sets used by Sinervo, named “PolarBear” [3], and later “SunBear” [43]. During a field trip to Brazil, Barry Sinervo from University of Santa Cruz California, Guarino Colli and Reuber Brandão from University of Brasília, shared stories about the Mapinguari and their paleotocas (preserved ancient burrows), and also created a new dance move, “the Mapinguari”, making the beast symbol of the collaboration between the two universities. Thus, I decided to name the package in homage to that collaboration and also to continue the tradition of naming programs after large furry animals. The package authors are: Gabriel Caetano, Juan Santos and Barry Sinervo.
 
 Mapinguari has tools that help addressing all six biological processes proposed by Urban [17], although some in indirect ways. In early development, the package was focused on physiology only, therefore, that is the most developed part; but since then it has expanded to other mechanisms due to user demand. I will keep adding new features on future versions to more realistic model those processes. Here, I briefly overview ways Mapinguari can be used to include each process in a species distribution model, with more detailed explanation on the methods on the next section, on functions descriptions.
 
@@ -53,9 +116,9 @@ This function fits General Additive Mixed Models (GAMM) of performance data agai
 
 To create a model of how hours above threshold (Hat) varies in relation to air temperature (Ta) in a specific kind of habitat, we estimate the parameters of a generalized logistic curve (Richards curve) by maximum likelihood, parameterized as follows:
 
-*H_at=Asym/〖(1 + K `*` e^(-Infl `*` T_a ))〗^(1/M)*
+$H_at=Asym/〖(1 + K `*` e^(-Infl `*` T_a ))〗^(1/M)$
 
-**Eq. 1 – Parameterization of Richards curve relating hours above threshold (Hat) to air temperature (Ta). K is the slope, Infl is the inflection point, Asym is the asymptote and M is the shape parameter.**
+[**Eq. 1 – Parameterization of Richards curve relating hours above threshold (Hat) to air temperature (Ta). K is the slope, Infl is the inflection point, Asym is the asymptote and M is the shape parameter.**]
 
 This parameterization constrains Hat between 0 and the asymptote (Asym). HATmodel offers default primers for coefficients, but the user can change them. The default probability density function is an exponential, since it continuous and strictly positive. The default primer used for Asym is day length, for Infl is half day length, for K is the slope of a linear regression between Hat and Ta, for M is 1. This function can then be inputted in EcoPhysRasters for spatial extrapolation of the model.
 
@@ -75,9 +138,9 @@ This function is similar to EcoPhysRasters, but creates or manipulates non speci
 	*Climatic Water Deficit (CWD)*: the evaporative demand that exceeds water availability, in meters. It is an estimation of water stress and is correlated to the distribution of vegetation types [59] and is calculated by subtracting AET from PET.
 *Relative Humidity*: the ratio between the amount of water present in the air and the amount necessary for saturation. Calculated by the equation below, modified from classic Tetens equation [62] to account for different units:
 
-*RH=Pw/(0.611 `*`〖10〗^((7.5 `*` T_a)/(237.3 + T_a )) )`*` 100%*
+$RH = Pw/(0.611 `*`〖10〗^((7.5 `*` T_a)/(237.3 + T_a )) )`*` 100%$
 	
-**Eq. 2 – Modified Tetens’ equation- RH is relative humidity, Pw is water vapor pressure in kPa and Ta is air temperature in degrees Celsius.**
+[**Eq. 2 – Modified Tetens’ equation- RH is relative humidity, Pw is water vapor pressure in kPa and Ta is air temperature in degrees Celsius.**]
 
 *Solar Radiation*: the amount of energy from sunrays reaching ground surface, in kilo Joules per square meter per day. This variable can either be calculated using the equation from Walter [63], implemented on package EcoHydRology, or it can be downloaded from WorldClim. However, WorldClim currently only has this variable for the baseline period (1960-2000).
 *Hours of sunlight*: amount of time in hours between sunrise and sunset in each location. This is calculated using Foresters’ implementation of Teets’ method [64, 65]. It is useful for phenological partitioning and for capping hours of activity estimations.
@@ -98,19 +161,19 @@ On performance trials with animals acclimated to different temperatures, they ar
 
 I modified a model created by Barry Sinervo (pers. comm.) to make it generalized for any time period. It averages TPCs’ predictions for the temperatures experienced by the organism in an area during acclimation period, counting back from middle month, weighted by the proportion of time spent at each temperature (discrete temperature series, usually with monthly resolution).
 
-*If 0 < a ≤ 0.5:*
-*P = f_GAMM(T_m, T_m)*
+$If 0 < a ≤ 0.5:$
+$P = f_GAMM(T_m, T_m)$
 
-*If 0.5 < a ≤ 1.5:*
-*P = (0.5 `*` f_GAMM(T_m, T_m) + (a - 0.5) `*` f_GAMM(T_m, T_(m - 1)))/a*
+$If 0.5 < a ≤ 1.5:$
+$P = (0.5 `*` f_GAMM(T_m, T_m) + (a - 0.5) `*` f_GAMM(T_m, T_(m - 1)))/a$
 
-*If 1.5 < a ≤ 2.5:*
-*P = (0.5 `*` f_GAMM(T_m, T_m) + f_GAMM(T_m, T_(m - 1)) + (a - 1.5) `*` f_GAMM(T_m, T_(m - 2)))/a*
+$If 1.5 < a ≤ 2.5:$
+$P = (0.5 `*` f_GAMM(T_m, T_m) + f_GAMM(T_m, T_(m - 1)) + (a - 1.5) `*` f_GAMM(T_m, T_(m - 2)))/a$
 
-*If a > 2.5:*
-*P = (0.5 `*` f_GAMM(T_m, T_m) + f_GAMM(T_m, T_(m - 1)) + ⋯ + f_GAMM(T_m, T_(m - ⌈ a -1.5 ⌉)) + (a + 0.5 - ⌊a + 0.5⌋) `*` f_GAMM(T_m, T_(m - ⌈a - 0.5 ⌉)))/a*
+$If a > 2.5:$
+$P = (0.5 `*` f_GAMM(T_m, T_m) + f_GAMM(T_m, T_(m - 1)) + ⋯ + f_GAMM(T_m, T_(m - ⌈ a -1.5 ⌉)) + (a + 0.5 - ⌊a + 0.5⌋) `*` f_GAMM(T_m, T_(m - ⌈a - 0.5 ⌉)))/a$
 
-**Eq. 3 – Performance (P) with acclimation calculations.  fGAMM is a GAMM function for a thermal performance curve with acclimation temperature as a covariate. The first term on fGAMM  is current temperature and the second term is acclimation temperature. Tm is the temperature in month m and a is acclimation time, how long it takes for the organism to acclimate to a new condition. A 0.5 corrector is used to account for time being counted back starting from mid current month. The ⌈ ⌉ symbol represents a ceiling function (round up to an integer) and the ⌊ ⌋ symbol represents a floor function (round down to an integer).**
+[**Eq. 3 – Performance (P) with acclimation calculations.  fGAMM is a GAMM function for a thermal performance curve with acclimation temperature as a covariate. The first term on fGAMM  is current temperature and the second term is acclimation temperature. Tm is the temperature in month m and a is acclimation time, how long it takes for the organism to acclimate to a new condition. A 0.5 corrector is used to account for time being counted back starting from mid current month. The ⌈ ⌉ symbol represents a ceiling function (round up to an integer) and the ⌊ ⌋ symbol represents a floor function (round down to an integer).**]
 							 
 **Hours above threshold**: this can be calculated either by using the model outputted from HATmodel or by making a sinusoid approximation of daily temperature variation and then counting the number of hours when temperature is above the threshold.
 
@@ -118,11 +181,11 @@ The first method simply uses the model from HATmodel and returns the predicted v
 
 In the absence of operative temperature data or if assuming the organism temperature will closely track air temperature, hours above threshold can be counted from a sinusoid approximation of daily variation in temperature. Alternatively, the air temperature rasters necessary for the sinusoid approximation can be replaced with operative temperature rasters, if spatial estimates of operative temperatures are available. This is the method used by Sinervo in 2010 [3].
 
-*H_at = ∑_(h = 1)^(daylength)▒∑_(s = 1)^res▒f(T_max, T_min, T_(thr), h, s)* 
+$H_at = ∑_(h = 1)^(daylength)▒∑_(s = 1)^res▒f(T_max, T_min, T_(thr), h, s)$
 
-*f(T_max, T_min, T_(thr,)h, s){█(1/res, ((T_max) - (T_min ))/2 `*` sin(π/12 `*` (h + s/res) - 3 `*` π/4) + ((T_max) + (T_min))/2>T_(thr)@0, ((T_max) - (T_min))/2 `*` sin(π/12 * (h + s/res) - 3 `*` π/4) + ((T_max) + (T_min))/2≤T_(thr))┤*
+$f(T_max, T_min, T_(thr,)h, s){█(1/res, ((T_max) - (T_min ))/2 `*` sin(π/12 `*` (h + s/res) - 3 `*` π/4) + ((T_max) + (T_min))/2>T_(thr)@0, ((T_max) - (T_min))/2 `*` sin(π/12 * (h + s/res) - 3 `*` π/4) + ((T_max) + (T_min))/2≤T_(thr))┤$
 
-**Eq. 4 – Calculation of hours above threshold (Hat) using a sinusoid approximation of daily temperature variation. Tthr is the temperature threshold of interest; Tmax is the maximum air temperature at the site at a particular time interval (usually month); Tmin is the minimum air temperature at a particular time interval (usually month); daylength is the number of hours in a day (or night) at the site at a particular time interval (usually month); h is an index for hours, ranging from 1 to daylength; s is an index for fractions of an hour with resolution res, ranging from 1 to res.**
+[**Eq. 4 – Calculation of hours above threshold (Hat) using a sinusoid approximation of daily temperature variation. Tthr is the temperature threshold of interest; Tmax is the maximum air temperature at the site at a particular time interval (usually month); Tmin is the minimum air temperature at a particular time interval (usually month); daylength is the number of hours in a day (or night) at the site at a particular time interval (usually month); h is an index for hours, ranging from 1 to daylength; s is an index for fractions of an hour with resolution res, ranging from 1 to res.**]
 
 ## MergeRasters
 
@@ -149,94 +212,3 @@ This function offers performance and validation statistics for SDMs. Sensitivity
 This function implements a simple algorithm simulating the dispersal of a species across time, assuming homogeneous vagility across species range. The user will supply a table of coordinates for the species distribution at time step 0, or a occurrence probability raster with a specified threshold for occupancy, in which case the function will create a table with coordinates of points above threshold; supply the distance the species can disperse in one time step; a number of time steps; a threshold value for settlement at a location and a list with the same number of rasters as time steps. The function will generate circles of radius equal to the dispersal distance around each coordinate of the species distribution at time step 0, then add to the coordinate table any raster cell within those circles that has a value above threshold on the first raster of the list, as well as drop any cell below threshold. This procedure will be repeated for the subsequent rasters on the list for the number of time steps informed.
 
 I hope to make this function more realistic in future versions, including condition dependent dispersal probability and better account for terrain and dispersal barriers.
-
-```{r, eval = FALSE}
-
-devtools::install_github("gabrielhoc/Mapinguari-development", auth_token = "2efd9f29b6fff9888d580e1e8d85dba3a3cc594a")
-
-FulanusEcoRasters_month <-
-  Ecology(raster_source = "./worldclim10m",
-    ext = FulanusDistribution,
-    non_fixed_var = c('prec', 'tmin', 'tmax'),
-    fixed_var = 'alt',
-    years = c("present", '2050', '2070'),
-    scenarios = c('rcp26', 'rcp45', 'rcp85'),
-    phenology = 'month',
-    reorder = T)
-
-FulanusEcoRasters_season <-
-  Ecology(raster_source = "./worldclim10m/",
-    ext = FulanusDistribution,
-    non_fixed_var = c('prec', 'tmin', 'tmax', 'PET', 'AET', 'CWD'),
-    fixed_var = 'alt',
-    years = c("present", '2050', '2070'),
-    scenarios = c('rcp26', 'rcp45', 'rcp85'),
-    phenology = 'season',
-    StartSeason = 3,
-    StopSeason = 8,
-    derive = T)
-
-perf_functions <-
-  Physiology(formula = performance ~ s(temp, bs = 'cs') + size,
-    data = FulanusPhysiology,
-    type = 'GAMM',
-    random = list(id = ~ 1)
-  )
-
-Perf_rasters <-
-EcoPhysiology(raster_source = FulanusEcoRasters,
-  Perf_args = list(temp = 'tmax', size = 10),
-  separator = '_',
-  PerfFUN = perf_functions$predict$model_1)
-
-PhenFUN <- function(x) 1/(1 + exp((26 - x)/2))
-
-```
-
-Vignettes are long form documentation commonly included in packages. Because they are part of the distribution of the package, they need to be as compact as possible. The `html_vignette` output type provides a custom style sheet (and tweaks some options) to ensure that the resulting html is as small as possible. The `html_vignette` format:
-
-- Never uses retina figures
-- Has a smaller default figure size
-- Uses a custom CSS stylesheet instead of the default Twitter Bootstrap style
-
-## Vignette Info
-
-Note the various macros within the `vignette` section of the metadata block above. These are required in order to instruct R how to build the vignette. Note that you should change the `title` field and the `\VignetteIndexEntry` to match the title of your vignette.
-
-## Styles
-
-The `html_vignette` template includes a basic CSS theme. To override this theme you can specify your own CSS in the document metadata as follows:
-
-    output: 
-      rmarkdown::html_vignette:
-        css: mystyles.css
-
-## Figures
-
-The figure sizes have been customised so that you can easily put two images side-by-side. 
-
-```{r, fig.show='hold'}
-plot(1:10)
-plot(10:1)
-```
-
-You can enable figure captions by `fig_caption: yes` in YAML:
-
-    output:
-      rmarkdown::html_vignette:
-        fig_caption: yes
-
-Then you can use the chunk option `fig.cap = "Your figure caption."` in **knitr**.
-
-## More Examples
-
-You can write math expressions, e.g. $Y = X\beta + \epsilon$, footnotes^[A footnote here.], and tables, e.g. using `knitr::kable()`.
-
-```{r, echo=FALSE, results='asis'}
-knitr::kable(head(mtcars, 10))
-```
-
-Also a quote using `>`:
-
-> "He who gives up [code] safety for [code] speed deserves neither."
-([via](https://twitter.com/hadleywickham/status/504368538874703872))
