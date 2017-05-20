@@ -2,6 +2,8 @@
 #'
 #' \code{Ecology} returns an organized list of environmental rasters.
 #'
+#' @importFrom magrittr "%>%"
+#'
 #' @param raster_source character or list of RasterStack. You can either input a path to a folder with the required rasters or a list of RasterStack organized by year/scenario.
 #' @param ext Extent object or dataframe with coordinates. Extension to crop rasters. You can either input an extent object or a table of coordinates, in which case, the points further in each direction will determine the extent for cropping.
 #' @param margin numeric. Additional distance to be added to the extent, in degrees.
@@ -24,28 +26,31 @@
 #'
 #' @examples
 #' FulanusEcoRasters_month <-
-#'EcoRasters2(raster_source = "./global_grids_10_minutes/",
-#'  ext = dist,
-#'  non_fixed_var = c('prec', 'tmin', 'tmax'),
-#'  fixed_var = 'alt',
-#'  years = c("present", '2050', '2070'),
-#'  scenarios = c('rcp26', 'rcp45', 'rcp85'),
-#'  phenology = 'month',
-#'  reorder = T)
+#'   Ecology(raster_source = "/Users/gabriel/Documents/Mapinguari-development/global_grids_10_minutes",
+#'     ext = FulanusDistribution,
+#'     non_fixed_var = c('prec', 'tmin', 'tmax'),
+#'     fixed_var = 'alt',
+#'     years = c("present", '2050', '2070'),
+#'     scenarios = c('rcp26', 'rcp45', 'rcp85'),
+#'     phenology = 'month',
+#'     reorder = TRUE,
+#'     separator = "_")
 #'
-#'FulanusEcoRasters_season <-
-#'  EcoRasters2(raster_source = "./global_grids_10_minutes/",
-#'    ext = dist,
-#'    non_fixed_var = c('prec', 'tmin', 'tmax', 'PET', 'AET', 'CWD'),
-#'    fixed_var = 'alt',
-#'    years = c("present", '2050', '2070'),
-#'    scenarios = c('rcp26', 'rcp45', 'rcp85'),
-#'    phenology = 'season',
-#'    StartSeason = 3,
-#'    StopSeason = 8,
-#'    derive = T)
+#' FulanusEcoRasters_season <-
+#'   Ecology(raster_source = "/Users/gabriel/Documents/Mapinguari-development/global_grids_10_minutes/",
+#'     ext = FulanusDistribution,
+#'     non_fixed_var = c('prec', 'tmin', 'tmax', 'PET', 'AET', 'CWD'),
+#'     fixed_var = 'alt',
+#'     years = c("present", '2050', '2070'),
+#'     scenarios = c('rcp26', 'rcp45', 'rcp85'),
+#'     phenology = 'season',
+#'     StartSeason = 3,
+#'     StopSeason = 8,
+#'     derive = TRUE,
+#'     separator = "_")
 #'
-
+#' @export
+#'
 Ecology <- function(raster_source,
   ext = raster::extent(-180, 180, -60, 90),
   margin = 0,
@@ -267,13 +272,20 @@ Ecology <- function(raster_source,
 
     if (isTRUE(download)) {
 
-      download_rasters(absent_vars, resolution, ext, projection_model)
+      download_rasters(absent_vars, resolution, ext, projection_model, baseline, separator)
 
     }
 
     if (isTRUE(derive)) {
 
-      derived_rasters  <- derive_rasters(absent_vars, derivable_vars, aliases_list, cropped_raster_list, resolution, ext, projection_model)
+      derived_rasters  <- derive_rasters(missing_vars = absent_vars,
+        derivable_vars = derivable_vars,
+        aliases_list = aliases_list,
+        cropped_raster_list = cropped_raster_list,
+        resolution = resolution,
+        ext = ext,
+        projection_model = projection_model,
+        separator = separator)
 
       cropped_raster_list <- append(cropped_raster_list, derived_rasters)
 
@@ -283,7 +295,7 @@ Ecology <- function(raster_source,
 
   all_rasters_list <- cropped_raster_list
 
-  if (reorder == T) {
+  if (reorder == TRUE) {
 
     all_rasters_list <-
       lapply(all_rasters_list, function(x){
@@ -459,7 +471,7 @@ FetchPath <- function(vari, raster_path){
   # Test if path is one global folder with subfolders for each variable. If it is, return a vector with subfolders as reference, if not just return vector with paths
 
   if (length(raster_path) == 1) {
-    raster_lookup <- list.dirs(raster_path, full.names = T)[-1] # [-1] is because the first element is the parent directory
+    raster_lookup <- list.dirs(raster_path, full.names = TRUE)[-1] # [-1] is because the first element is the parent directory
   } else {
     raster_lookup <- raster_path
   }
@@ -474,7 +486,7 @@ FetchPath <- function(vari, raster_path){
       raster_lookup %>%
       stringr::str_which(vari) %>%
       raster_lookup[[.]] %>%
-      list.files(pattern = '*.bil$|*.tif$|*.gri$', full.names = T, ignore.case = T) %>%
+      list.files(pattern = '*.bil$|*.tif$|*.gri$', full.names = T, ignore.case = TRUE) %>%
       raster::stack()
 
     message(success_message)
@@ -554,7 +566,12 @@ VYScomb <- function(years = NA,
 # This function downloads rasters from worldclim
 
 
-download_rasters <- function(missing_vars, resolution, ext, projection_model) {
+download_rasters <- function(missing_vars,
+  resolution,
+  ext,
+  projection_model,
+  separator = "_",
+  baseline) {
 
   downloadable_vars <- c("tmax", "tx",
     "tmin", "tn",
@@ -610,7 +627,14 @@ download_rasters <- function(missing_vars, resolution, ext, projection_model) {
 # derive_rasters-------------------------------------------------------------------------------------------------------------
 
 
-derive_rasters <- function(missing_vars, derivable_vars, aliases_list, cropped_raster_list, resolution, ext, projection_model) {
+derive_rasters <- function(missing_vars,
+  derivable_vars,
+  aliases_list,
+  cropped_raster_list,
+  resolution,
+  ext,
+  projection_model,
+  separator = "_") {
 
   if (length(missing_vars) == 0) return(0)
 
@@ -691,7 +715,7 @@ derive_rasters <- function(missing_vars, derivable_vars, aliases_list, cropped_r
           dplyr::filter(vars == 'PET')
 
         PET_rasters <-
-          plyr::alply(PET_vars, 1, function(x){
+          plyr::alply(PET_vars, 1, function(x, separator){
 
             tmax_year_scenario <-
               paste('tmax', x$year, x$scenario, sep = separator) %>%
@@ -752,7 +776,7 @@ derive_rasters <- function(missing_vars, derivable_vars, aliases_list, cropped_r
         AET_vars <- dplyr::filter(missing_vars, vars == "AET")
 
         AET_rasters <-
-          plyr::alply(AET_vars, 1, function(x){
+          plyr::alply(AET_vars, 1, function(x, separator){
 
             PET_year_scenario <-
               paste('PET', x$year, x$scenario, sep = separator) %>%
@@ -811,7 +835,7 @@ derive_rasters <- function(missing_vars, derivable_vars, aliases_list, cropped_r
         CWD_vars <- dplyr::filter(missing_vars, vars == "CWD")
 
         CWD_rasters <-
-          plyr::alply(CWD_vars, 1, function(x){
+          plyr::alply(CWD_vars, 1, function(x, separator){
 
             PET_year_scenario <-
               paste('PET', x$year, x$scenario, sep = separator) %>%
@@ -841,55 +865,4 @@ derive_rasters <- function(missing_vars, derivable_vars, aliases_list, cropped_r
 
 }
 
-# --------------------
-# Numerical phenology function
-# averages accross rasters within and without season, as supplied by user (numerical)
-
-Phenology_numerical <- function(rasterstack, StartSeason, StopSeason) {
-
-  if (length(names(rasterstack)) != 12) return(rasterstack)
-
-  if (StartSeason < 0 | StartSeason > 12 | StopSeason < 0 | StopSeason > 12) stop("Months outside range.")
-
-  start_month <- StartSeason %/% 1
-  start_fraction <- StartSeason %% 1
-  stop_month <- StopSeason %/% 1
-  stop_fraction <- StopSeason %% 1
-
-  # roll months so starting month is first
-  # this avoid complications when stop month is smaller than starting month
-
-  rolled_months <-
-    c(0:11) %>%
-    `+`(start_month) %>%
-    `%%`(12) %>%
-    `+`(1)
-
-  season_months <-
-    rolled_months %>%
-    `==`(stop_month) %>%
-    which() %>%
-    `:`(1, .) %>%
-    `[`(rolled_months, .)
-
-  inside_months <- raster::mean(rasterstack[[season_months]], na.rm = T)
-
-  outside_months <- raster::mean(rasterstack[[-season_months]], na.rm = T)
-
-  fraction_first_month <-
-    rasterstack[[start_month]] %>%
-    `*`(start_fraction)
-
-  fraction_last_month <-
-    rasterstack[[stop_month]] %>%
-    `*`(stop_fraction)
-
-  season_average <- inside_months + fraction_first_month + fraction_last_month
-  no_season_average <- outside_months - fraction_first_month - fraction_last_month
-
-  output <- raster::stack(season_average, no_season_average)
-  names(output) <- c("Season", "NonSeason")
-
-  return(output)
-
-}
+utils::globalVariables(".")

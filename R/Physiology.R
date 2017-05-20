@@ -1,8 +1,34 @@
-################################################
-############### PerfFUN function ###############
-################################################
-
-PerfFUN <- function(formula,
+#' Creates functions relating environment to physiology.
+#'
+#' \code{Physiology} Creates functions relating environment to physiology.
+#'
+#' @param formula formula. Model formula.
+#' @param data data frame. Table containing variables in model formula.
+#' @param type character. Algorithm used for model. 'GAMM' or 'NLME'
+#' @param fixed
+#' @param random
+#' @param start
+#' @param correlation
+#' @param x_axis
+#' @param y_axis
+#' @param z_axis
+#' @param scale
+#' @param ...
+#'
+#' @return Returns a list of raster stacks for the variables required, organized by year/scenario combination.
+#'
+#' @examples
+#'
+#' perf_functions <-
+#' Physiology(formula = performance ~ s(temp, bs = 'cs') + size,
+#'  data = FulanusPhysiology,
+#'  type = 'GAMM',
+#'  random = list(id = ~ 1),
+#'  separator = '_'
+#' )
+#'
+#' @export
+Physiology <- function(formula,
   data,
   type, # GAMM or NLME
   fixed = NULL,
@@ -13,6 +39,7 @@ PerfFUN <- function(formula,
   y_axis = NULL,
   z_axis = NULL,
   scale = NULL,
+  separator,
   ...
 ) {
 
@@ -118,9 +145,9 @@ PerfFUN <- function(formula,
     GAMM = {
 
       list(
-        AIC = AIC(table_slice$output[[1]]$lme),
-        BIC = BIC(table_slice$output[[1]]$lme),
-        logLik = logLik(table_slice$output[[1]]$lme)
+        AIC = stats::AIC(table_slice$output[[1]]$lme),
+        BIC = stats::BIC(table_slice$output[[1]]$lme),
+        logLik = stats::logLik(table_slice$output[[1]]$lme)
       ) # close list
 
     }, # close GAMM

@@ -1,8 +1,17 @@
-# develop Phen_args (look at Perf_raster)
-# make a decision about the grouping of rasters
-# Make sure names are preserved
-
-Phen_logistic <- function(raster_list, PhenFUN, Phen_args) {
+#' Groups rasters by duration of phenological event.
+#'
+#' \code{Phenology} Groups rasters by duration of phenological event.
+#'
+#' @param raster_list list of RasterStacks. Only accept stacks with 12 layers.
+#' @param Phen_args named list of strings. Correspondence between PhenFUN arguments and raster names.
+#' @param PhenFUN function. Function relating phenological event to environmental conditions.
+#'
+#' @return Returns a list of raster stacks for the variables required, organized by year/scenario combination.
+#'
+#' @examples
+#'
+#' @export
+Phenology <- function(raster_list, PhenFUN, Phen_args) {
 
   final_list <-
   lapply(raster_list, function(x){
@@ -60,5 +69,57 @@ Phen_logistic <- function(raster_list, PhenFUN, Phen_args) {
   )
 
   return(final_list)
+
+}
+
+# Numerical phenology function
+# averages accross rasters within and without season, as supplied by user (numerical)
+
+Phenology_numerical <- function(rasterstack, StartSeason, StopSeason) {
+
+  if (length(names(rasterstack)) != 12) return(rasterstack)
+
+  if (StartSeason < 0 | StartSeason > 12 | StopSeason < 0 | StopSeason > 12) stop("Months outside range.")
+
+  start_month <- StartSeason %/% 1
+  start_fraction <- StartSeason %% 1
+  stop_month <- StopSeason %/% 1
+  stop_fraction <- StopSeason %% 1
+
+  # roll months so starting month is first
+  # this avoid complications when stop month is smaller than starting month
+
+  rolled_months <-
+    c(0:11) %>%
+    `+`(start_month) %>%
+    `%%`(12) %>%
+    `+`(1)
+
+  season_months <-
+    rolled_months %>%
+    `==`(stop_month) %>%
+    which() %>%
+    `:`(1, .) %>%
+    `[`(rolled_months, .)
+
+  inside_months <- raster::mean(rasterstack[[season_months]], na.rm = TRUE)
+
+  outside_months <- raster::mean(rasterstack[[-season_months]], na.rm = TRUE)
+
+  fraction_first_month <-
+    rasterstack[[start_month]] %>%
+    `*`(start_fraction)
+
+  fraction_last_month <-
+    rasterstack[[stop_month]] %>%
+    `*`(stop_fraction)
+
+  season_average <- inside_months + fraction_first_month + fraction_last_month
+  no_season_average <- outside_months - fraction_first_month - fraction_last_month
+
+  output <- raster::stack(season_average, no_season_average)
+  names(output) <- c("Season", "NonSeason")
+
+  return(output)
 
 }

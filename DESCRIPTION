@@ -1,6 +1,6 @@
 Package: Mapinguari
 Type: Package
-Title: Provides tools for process-based species distribution modelling.
+Title: Provides tools for process-based species distribution modelling
 Version: 0.0.0.9999
 Authors@R: c(
     person("Gabriel", "Caetano", email = "gabrielhoc@gmail.com", role = c("aut", "cre")),
@@ -21,6 +21,7 @@ Imports: dplyr,
     EcoHydRology,
     ggmap,
     ggplot2,
+    magrittr,
     mgcv,
     nlme,
     plyr,
