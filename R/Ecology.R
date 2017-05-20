@@ -40,6 +40,20 @@
 #'     separator = "_")
 #'
 #' FulanusEcoRasters_season <-
+#'   Ecology(raster_source = "/Users/gabriel/Documents/Mapinguari-development/global_grids_10_minutes/",
+#'     ext = FulanusDistribution,
+#'     non_fixed_var = c('prec', 'tmin', 'tmax', 'PET', 'AET', 'CWD'),
+#'     fixed_var = 'alt',
+#'     years = c("present", '2050', '2070'),
+#'     scenarios = c('rcp26', 'rcp45', 'rcp85'),
+#'     phenology = 'season',
+#'     StartSeason = 3,
+#'     StopSeason = 8,
+#'     derive = TRUE)
+#'
+#' @export
+
+#' FulanusEcoRasters_season <-
 #'   Ecology(
 #'     raster_source = "/Users/gabriel/Documents/Mapinguari-development/global_grids_10_minutes",
 #'     ext = FulanusDistribution,
@@ -54,6 +68,7 @@
 #'     separator = "_")
 #'
 #' @export
+
 Ecology <- function(raster_source,
   ext = raster::extent(-180, 180, -60, 90),
   margin = 0,
