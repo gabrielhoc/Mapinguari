@@ -3,7 +3,7 @@
 #' \code{EcoPhysiology} Transform environmental rasters in ecophysiological rasters.
 #'
 #' @param raster_source character or list of RasterStack. You can either input a path to a folder with the required rasters or a list of RasterStack organized by year/scenario.
-#' @param Perf_args
+#' @param Perf_args named list of strings. Correspondence between PerfFUN arguments and raster names.
 #' @param separator character. Character that separates variable names, years and scenarios.
 #' @param PerfFUN function. Function used to modify rasters.
 #'
