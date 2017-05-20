@@ -236,6 +236,8 @@ Physiology <- function(formula,
     dplyr::mutate(model = models_key) %>%
     dplyr::select(model, dplyr::everything())
 
+  names(model_table_final$formula) <- models_key
+
   return(model_table_final)
 
 }

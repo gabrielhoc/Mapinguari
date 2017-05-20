@@ -9,7 +9,7 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-```{r}
+```{r, message = FALSE, warning = FALSE}
 devtools::install_github("gabrielhoc/Mapinguari-development", auth_token = "2efd9f29b6fff9888d580e1e8d85dba3a3cc594a")
 ```
 
@@ -133,8 +133,7 @@ perf_functions <-
   Physiology(formula = performance ~ s(temp, bs = 'cs') + size,
     data = FulanusPhysiology,
     type = 'GAMM',
-    random = list(id = ~ 1),
-    separator = '_'
+    random = list(id = ~ 1)
   )
 ```
 
@@ -143,11 +142,22 @@ perf_functions <-
 The function outputs a table containing informations about each model fitted and a closure to be used for predictions. You can access the closures and statistics by subsetting the table, as shown below.
 
 ```{r}
-perf_functions
+perf_functions$formula$model_1
+perf_functions$stats$model_1
+perf_functions$output$model_1
 
+my_tpc <- perf_functions$predict$model_1
 
+my_tpc(temp = 20, size = 10)
 ```
 
+This closure can be combined with the output from `Ecology` to create a raster of physiology, ehich varies according to local environmental conditions. This is the subject of the next function.
+
+# EcoPhysiology
+
+#Phenology
+
+---------------------------------
 
 # Theory
 
