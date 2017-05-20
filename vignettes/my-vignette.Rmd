@@ -9,6 +9,10 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
+```{r}
+devtools::install_github("gabrielhoc/Mapinguari-development", auth_token = "2efd9f29b6fff9888d580e1e8d85dba3a3cc594a")
+```
+
 # The fate of *Fulanus*
 
 *Fulanus beltranus* is a fictional species of lizard from central Africa. We would like to find out how this species is going to do in different climate change scenarios. First let's look at the points where it is currently known to occurr. To access the distribution data, we must load package Mapinguari.
