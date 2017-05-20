@@ -54,7 +54,6 @@
 #'     separator = "_")
 #'
 #' @export
-#'
 Ecology <- function(raster_source,
   ext = raster::extent(-180, 180, -60, 90),
   margin = 0,
