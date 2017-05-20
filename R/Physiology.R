@@ -48,7 +48,7 @@ PerfFUN <- function(formula,
 
   # Create key for table
 
-  models_key <- paste("model", seq_len(length(formula)), sep = "_")
+  models_key <- paste("model", seq_len(length(formula)), sep = separator)
 
   # remove NULLs and create table
 
@@ -142,12 +142,72 @@ PerfFUN <- function(formula,
 
   predict_list <- lapply(model_table_output_stats$output, function(x){
 
-    TPC_function <- function(...) {
-      formula_gam <- x$gam
-      pred_data <- data.frame(...)
-      P <- as.vector(predict(formula_gam, pred_data))
+    formula_gam <- x$gam
+
+    args_names <-
+      formula_gam$formula %>%
+      all.vars() %>%
+      `[`(-1)
+
+    args_list <- vector("list", length(args_names))
+
+    names(args_list) <- args_names
+
+    TPC_function <- function() {
+
+      pred_data <-
+        match.call() %>%
+        as.list() %>%
+        `[`(-1)
+
+      is_raster <-
+        sapply(pred_data, function(x) {
+        x %>%
+        class() %>%
+            grepl('^Raster', .)
+        }
+        ) %>%
+        any()
+
+      if (is_raster) {
+
+        args_stack <-
+          pred_data %>%
+          sapply(., function(x) {
+
+            x %>%
+              class() %>%
+              grepl('^Raster', .)
+
+          }
+            ) %>%
+          `[`(pred_data, .) %>%
+          raster::stack()
+
+        args_constant <-
+          pred_data %>%
+          sapply(., function(x) class(x) == "numeric") %>%
+          `[`(pred_data, .)
+
+        P <-
+        raster::predict(model = formula_gam, object = args_stack, const = args_constant)
+
+      } else {
+
+      P <-
+        predict(formula_gam, pred_data) %>%
+        as.vector()
+
+      }
+
       return(P)
+
     } # close TPC function
+
+    formals(TPC_function) <- args_list
+
+    TPC_function
+
   } # close factory
   ) # close lapply
 

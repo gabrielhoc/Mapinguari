@@ -1,9 +1,11 @@
-Package: Mapinguari
+Package: Mapinguari (or ProcessSDM)
 Type: Package
-Title: What the Package Does (Title Case)
-Version: 0.1.0
-Author: Gabriel Caetano, Juan Santos, Barry Sinervo
-Maintainer: Gabriel Caetano <gabrielhoc@gmail.com>, Juan Santos <Juan's email>
+Title: Provides tools for process-based species distribution modelling.
+Version: 0.0.0.9999
+Authors@R: c(
+    person("Gabriel", "Caetano", email = "gabrielhoc@gmail.com", role = c("aut", "cre")),
+    person("Juan", "Santos", email = "infraguttatus@gmail.com", role = c("aut", "cre"),
+    person("Barry", "Sinervo", email = "lizardrps@gmail.com", role = c("aut", "cre")))
 Description: More about what it does (maybe more than one line)
     Use four spaces when indenting paragraphs within the Description.
 License: What license is it under?
