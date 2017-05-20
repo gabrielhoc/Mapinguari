@@ -11,7 +11,7 @@ vignette: >
 
 # The fate of *Fulanus*
 
-*Fulanus beltranus* is a fictional species of flowering plant from central Africa. We would like to find out how this species is going to do in different climate change scenarios. First let's look at the points where it is currently known to occurr. To access the distribution data, we must load package Mapinguari.
+*Fulanus beltranus* is a fictional species of lizard from central Africa. We would like to find out how this species is going to do in different climate change scenarios. First let's look at the points where it is currently known to occurr. To access the distribution data, we must load package Mapinguari.
 
 ```{r, message = FALSE, warning = FALSE, fig.height = 6, fig.width = 6}
 library(Mapinguari)
@@ -24,15 +24,20 @@ ggmap::ggmap(Fulanus_big) +
   ggplot2::geom_point(data = FulanusDistribution, mapping = ggplot2::aes(x = Lon, y = Lat), size = 0.5, colour = 'red')
 ```
 
+# function Distribution
+
 It seems some points are in the ocean! Those must be wrong, let's use Mapinguari's `Distribution` fuction to clean them up.
 
 ```{r}
 # insert here point clean up and plot again
 ```
 
-How does the climate looks like in this area? We can use function `Ecology` to extract WorldClim surfaces for that area.
+# function Ecology
+That is a terrible name, I wanted to call it "Environment", but environment has a very specific meaning in R and it would be confusing.
 
-```{r}
+How does the climate looks like in this area? We can use function `Ecology` to extract WorldClim surfaces for that area. The argument `ext` tells us which is the area you desire to crop your rasters around. It accepts either an Extent object with the coordinates of cropping limits, or a table of longitudes and latitudes, in which case it will grab the coordinates of the most extreme points and use those as the cropping limits. The argument `margin` adds to these limits, and it is on the same unit as the coordinates you supplied.
+
+```{r, message = FALSE, warning = FALSE, fig.height = 6, fig.width = 6}
 FulanusEcoRasters_present <-
    Ecology(
      raster_source = "/Users/gabriel/Documents/Mapinguari-development/global_grids_10_minutes",
@@ -47,13 +52,27 @@ FulanusEcoRasters_present <-
 raster::plot(FulanusEcoRasters_present[[1]])
 ```
 
+`Ecology` is able to download rasters from WorldClim, but you probably don't want to download them everytime you are executing the function. That's why the argument `raster_source` will also take a list of rasters from your workspace or a path to a folder containing those rasters.
+
+However, in order for Mapinguari to recognize which variables correspond to each year or scenario, you have to name your folders and list elements following the convention *variable_year_scenario*. The defaul character for separating those terms is "_", but you can change that, as long as you do the corresponding change to the argument `separator` in function. Some of your rasters will not be subject to scenarios, since they are measures of current climate, instead of projections. In that case you only have to name them *variable_year*, omitting the scenario term. The argument `baseline` identifies which years are not subject to scenarios, and the default is `present` and `baseline`, but it can be changed at your convenience. Some other variables are constant accross time, such as altitude. In that case you only have to write the name of the variable. Here is an example of how my folder is structured:
+
+image: ![](/Users/gabriel/Documents/Mapinguari-development/vignettes/folder_organization.png)
+
+I'm going to assign the path to that directory to an object:
+
+```{r}
+my_directory <- "/Users/gabriel/Documents/Mapinguari-development/global_grids_10_minutes"
+```
+
 Why did I place some variables in the `non-fixed` argument and others in the `fixed` argument? Well, that will become relevant once we start making future projections. Variables on `non_fixed` are things such as climate, which you expect to change in different times and future scenarios, while variables in `fixed` are things such as geological features, which you expect to remain constant accross the time projected.
 
+Another important argument for non-fixed variables is `reorder`, which will take the last two characters of your RasterLayer names, replace letters with zeros and order the layers in ascending order of those numbers. This is useful because of the way some of the WorldClim layers are named when you downloaded, which when stacked will be placed out of chronological order. This argument fixes that. But be careful if you are using layers with different names than the ones from WorldClim. If they are in the correct order when you stack them, `reorder` could scramble them, so set it to FALSE.
+
 Let's try doing some projections for the future years of 2050 and 2070:
-```{r}
+```{r, message = FALSE, warning = FALSE, fig.height = 6, fig.width = 6}
 FulanusEcoRasters_future <-
    Ecology(
-     raster_source = "/Users/gabriel/Documents/Mapinguari-development/global_grids_10_minutes",
+     raster_source = my_directory,
      ext = FulanusDistribution,
      margin = 5,
      non_fixed_var = c('prec', 'tmin', 'tmax'),
@@ -68,7 +87,63 @@ raster::plot(raster::stack(
   FulanusEcoRasters_future$`2050_rcp85`$tmax_2050_rcp85))
 ```
 
-image: ![](/Users/gabriel/Documents/Mapinguari-development/man/folder_organization.png)
+We might want to derive more complex variables that might be relevant to this species, such as Potential EvapoTranspiration (PET), Actual EvapoTranspiration (AET) or Climatic Water Deficit (CWD). Since those variables are calculated from the WorldClim variables, you need to supply those dependencies on `raster_source`. **make table of derivable variables and dependencies**. You also have to set the argument `derive` to TRUE, in order for the function to understand you are not trying to fetch the derived variables from `raster_source` (you can derive them the first time, save and load them from the directory like the other variables). 
+
+```{r, message = FALSE, warning = FALSE, fig.height = 6, fig.width = 6}
+FulanusEcoRasters_derived <-
+   Ecology(
+     raster_source = my_directory,
+     ext = FulanusDistribution,
+     margin = 5,
+     non_fixed_var = c('tmin', 'tmax', 'prec', 'PET', 'AET', 'CWD'),
+     years = c('present', '2050', '2070'),
+     scenarios = c('rcp26', 'rcp45', 'rcp85'),
+     phenology = 'year',
+     reorder = TRUE,
+     derive = TRUE)
+
+raster::plot(raster::stack(
+  FulanusEcoRasters_derived$present$PET_present, 
+  FulanusEcoRasters_derived$present$AET_present, 
+  FulanusEcoRasters_derived$present$CWD_present))
+```
+
+You might have noticed the argument `phenology`, which in our examples is set to 'year'. That means the `non-fixed` variables, which are usually in monthly resolution, will be averaged accross the year. If you want to preserve them in monthly resolution, you can set it to `month`. There is another setting, which is `season`, that I will describe in more detail when talking about the `Phenology` function.
+
+# function Physiology
+
+This function main goal is to create models of the relationship between a physiological measure and a environmental one, and output a closure so the physiological measure can be easily extrapolated to other environmental data, such as spatial or temporal data. It also evaluates the models, allowing the users to compare different parameterizations. For now, the function wraps `mgcv::gamm()` and `nlme::nlme()`, allowing for flexible additive models and rigorous non-linear mixed models. You can get creative and use the functions for measures other than physiology. For example, you might want to fit a logisitic model of reproductive state against environment, which can be useful as an input for function `Phenology`.
+
+Back to *Fulanus*, we measured the maximum running speed of several individuals under different temperatures. We also recorded their body sizes, since that is a variable that is very likely to inffluence their performance. Here is how the data look like:
+
+```{r}
+head(FulanusPhysiology)
+```
+
+Note that we also attributed a number to each lizard to keep track of which lizard did which trial. That is important because, since the same lizard ran different trials, the data points are not independent and we have to account for that when building our model.
+
+The function is simple and accepts any argument from `mgcv::gamm()` or `nlme::nlme()`:
+
+```{r}
+perf_functions <-
+  Physiology(formula = performance ~ s(temp, bs = 'cs') + size,
+    data = FulanusPhysiology,
+    type = 'GAMM',
+    random = list(id = ~ 1),
+    separator = '_'
+  )
+```
+
+`type` indicates which function will you use to build your model, it accepts the values 'GAMM' and 'NLME' (I didn't use `method` because that was an argument in nlme). `formula`, `data` and `random` are the same as in `mgcv::gamm()`, and you can find more detail about those at their package documentation. `formula` will describe the structure of your model, including smooth terms (for method 'GAMM') and nonlinear terms (for method 'NLME'). `data` is simply a data frame containing the variables specified in the formula. `random` accounts for the structure of random effects in your mixed model. 
+
+The function outputs a table containing informations about each model fitted and a closure to be used for predictions. You can access the closures and statistics by subsetting the table, as shown below.
+
+```{r}
+perf_functions
+
+
+```
+
 
 # Theory
 

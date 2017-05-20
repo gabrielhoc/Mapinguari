@@ -19,8 +19,7 @@
 #' Physiology(formula = performance ~ s(temp, bs = 'cs') + size,
 #'  data = FulanusPhysiology,
 #'  type = 'GAMM',
-#'  random = list(id = ~ 1),
-#'  separator = '_'
+#'  random = list(id = ~ 1)
 #' )
 #'
 #' @export
@@ -31,7 +30,6 @@ Physiology <- function(formula,
   random = NULL,
   start = NULL,
   correlation = NULL,
-  separator,
   ...
 ) {
 
@@ -67,7 +65,7 @@ Physiology <- function(formula,
 
   # Create key for table
 
-  models_key <- paste("model", seq_len(length(formula)), sep = separator)
+  models_key <- paste("model", seq_len(length(formula)), sep = "_")
 
   # remove NULLs and create table
 
