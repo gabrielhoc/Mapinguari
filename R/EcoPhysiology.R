@@ -1,5 +1,34 @@
+#' Transform environmental rasters in ecophysiological rasters.
+#'
+#' \code{EcoPhysiology} Transform environmental rasters in ecophysiological rasters.
+#'
+#' @param raster_source character or list of RasterStack. You can either input a path to a folder with the required rasters or a list of RasterStack organized by year/scenario.
+#' @param Perf_args
+#' @param separator character. Character that separates variable names, years and scenarios.
+#' @param PerfFUN
+#'
+#' @return Returns a list of raster stacks for the variables required, organized by year/scenario combination.
+#'
+#' @examples
+#' FulanusEcoRasters <-
+#'   Ecology(raster_source = "/Users/gabriel/Documents/Mapinguari-development/global_grids_10_minutes",
+#'     ext = FulanusDistribution,
+#'     non_fixed_var = c('prec', 'tmin', 'tmax'),
+#'     fixed_var = 'alt',
+#'     years = c("present", '2050', '2070'),
+#'     scenarios = c('rcp26', 'rcp45', 'rcp85'),
+#'     phenology = 'month',
+#'     reorder = TRUE)
+#'
+#' Perf_rasters <-
+#' EcoPhysiology(raster_source = FulanusEcoRasters,
+#'  Perf_args = list(temp = 'tmax', size = 10),
+#'  separator = '_',
+#'  PerfFUN = perf_functions$predict$model_1)
+#'
+#' @export
 
-  Perf_rasters <- function(raster_source, Perf_args, separator, PerfFUN) {
+EcoPhysiology <- function(raster_source, Perf_args, separator, PerfFUN) {
 
     if (class(raster_source[[1]]) == 'RasterStack') {
 
