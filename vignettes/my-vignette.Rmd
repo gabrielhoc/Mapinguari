@@ -1,5 +1,5 @@
 ---
-title: "Mapinguari (or ProcessSDM, or SDMProcess, or pSDM, or SDMp)"
+title: "Mapinguari (or ProcessSDM)"
 author: "Gabriel Caetano, Juan Santos, Barry Sinervo"
 date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
@@ -156,7 +156,7 @@ This closure can be combined with the output from `Ecology` to create a raster o
 
 `EcoPhysiology` does the link between your physiological model and your spatial environmental data. It will apply any function to each year/scenario combination, as long as the variables necessary for the model are present. Sometimes you might name variables differently on your model and on your rasters. To deal with this situation, the argument `Perf_args` acts as a dictionary. It is a named list, in which the names are the variables in the model and the arguments are character strings of the variables in the rasters. You might also supply a numerical constant instead of a character string. That way, this variable will be set to that value for all calculations. That might be useful for example, if your model contain individual covariates such as body size, and you want to set a standard value for every calculation, for example, average body size.
 
-```{r, message = FALSE, warning = FALSE}
+```{r, message = FALSE, warning = FALSE, fig.height = 6, fig.width = 6}
 FulanusEcoRasters_month <-
    Ecology(
      raster_source = my_directory,
