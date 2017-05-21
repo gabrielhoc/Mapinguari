@@ -282,14 +282,14 @@ Ecology <- function(raster_source,
 
     if (isTRUE(derive)) {
 
-      derived_rasters  <- derive_rasters(missing_vars = absent_vars,
-        derivable_vars = derivable_vars,
-        aliases_list = aliases_list,
-        cropped_raster_list = cropped_raster_list,
-        resolution = resolution,
-        ext = ext,
-        projection_model = projection_model,
-        separator = separator)
+      derived_rasters  <- derive_rasters(.absent_vars = absent_vars,
+        .derivable_vars = derivable_vars,
+        .aliases_list = aliases_list,
+        .cropped_raster_list = cropped_raster_list,
+        .resolution = resolution,
+        .ext = ext,
+        .projection_model = projection_model,
+        .separator = separator)
 
       cropped_raster_list <- append(cropped_raster_list, derived_rasters)
 
@@ -657,35 +657,35 @@ download_rasters <- function(missing_vars,
 # derive_rasters-------------------------------------------------------------------------------------------------------------
 
 
-derive_rasters <- function(missing_vars,
-  derivable_vars,
-  aliases_list,
-  cropped_raster_list,
-  resolution,
-  ext,
-  projection_model,
-  separator = "_") {
+derive_rasters <- function(.absent_vars,
+  .derivable_vars,
+  .aliases_list,
+  .cropped_raster_list,
+  .resolution,
+  .ext,
+  .projection_model,
+  .separator = "_") {
 
-  if (length(missing_vars) == 0) return(0)
+  if (length(.absent_vars) == 0) return(0)
 
   vars_for_derivation_no_order <-
-    missing_vars$vars %in% names(derivable_vars) %>%
-    missing_vars[.,]
+    .absent_vars$vars %in% names(.derivable_vars) %>%
+    .absent_vars[.,]
 
   vars_for_derivation <-
     vars_for_derivation_no_order %>%
-    dplyr::mutate(vars = factor(vars, levels = names(derivable_vars))) %>%
+    dplyr::mutate(vars = factor(vars, levels = names(.derivable_vars))) %>%
     dplyr::arrange(vars)
 
   dependencies <- list()
 
   derived_rasters <- list()
 
-      if (isTRUE(any(match(vars_for_derivation$vars, aliases_list$lat_aliases)))) {
+      if (isTRUE(any(match(vars_for_derivation$vars, .aliases_list$lat_aliases)))) {
 
-        if (class(cropped_raster_list[[1]]) != 'RasterStack') stop("Unable to find a raster to derive latitude") # Get better error message
+        if (class(.cropped_raster_list[[1]]) != 'RasterStack') stop("Unable to find a raster to derive latitude") # Get better error message
 
-        lat_raster  <- raster::init(cropped_raster_list[[1]], 'y')
+        lat_raster  <- raster::init(.cropped_raster_list[[1]], 'y')
         names(lat_raster) <- 'lat'
 
         dependencies$lat <- lat_raster
@@ -693,48 +693,48 @@ derive_rasters <- function(missing_vars,
 
       }
 
-      if (isTRUE(any(match(vars_for_derivation$vars, aliases_list$lon_aliases)))) {
+      if (isTRUE(any(match(vars_for_derivation$vars, .aliases_list$lon_aliases)))) {
 
-        if (class(cropped_raster_list[[1]]) != 'RasterStack') stop("Unable to find a raster to derive longitude") # Get better error message
+        if (class(.cropped_raster_list[[1]]) != 'RasterStack') stop("Unable to find a raster to derive longitude") # Get better error message
 
-        lon_raster <- raster::init(cropped_raster_list[[1]], 'x')
+        lon_raster <- raster::init(.cropped_raster_list[[1]], 'x')
 
         dependencies$lon <- lon_raster
         derived_rasters$lon <- lon_raster
 
       }
 
-      if (isTRUE(any(match(vars_for_derivation$vars, aliases_list$hours_of_sunlight_aliases)))) {
+      if (isTRUE(any(match(vars_for_derivation$vars, .aliases_list$hours_of_sunlight_aliases)))) {
 
 
 
       }
 
-      if (isTRUE(any(match(vars_for_derivation$vars, aliases_list$slope_aliases)))) {
+      if (isTRUE(any(match(vars_for_derivation$vars, .aliases_list$slope_aliases)))) {
 
-        if (class(cropped_raster_list$alt) != 'RasterStack') stop("Unable to find variable alt") # Get better error message
+        if (class(.cropped_raster_list$alt) != 'RasterStack') stop("Unable to find variable alt") # Get better error message
 
-        slope_raster <- raster::stack(raster::terrain(cropped_raster_list$alt, opt = 'slope', unit = 'radians', neighbors = 8))
+        slope_raster <- raster::stack(raster::terrain(.cropped_raster_list$alt, opt = 'slope', unit = 'radians', neighbors = 8))
 
         dependencies$slope <- slope_raster
         derived_rasters$slope <- slope_raster
 
       }
 
-      if (isTRUE(any(match(vars_for_derivation$vars, aliases_list$aspect_aliases)))) {
+      if (isTRUE(any(match(vars_for_derivation$vars, .aliases_list$aspect_aliases)))) {
 
-        if (class(cropped_raster_list$alt) != 'RasterStack') stop("Unable to find variable alt") # Get better error message
+        if (class(.cropped_raster_list$alt) != 'RasterStack') stop("Unable to find variable alt") # Get better error message
 
-        aspect_raster  <- raster::stack(raster::terrain(cropped_raster_list$alt, opt = 'aspect', unit = 'radians', neighbors = 8))
+        aspect_raster  <- raster::stack(raster::terrain(.cropped_raster_list$alt, opt = 'aspect', unit = 'radians', neighbors = 8))
 
         dependencies$aspect <- aspect_raster
         derived_rasters$aspect <- aspect_raster
 
       }
 
-      if (isTRUE(any(match(vars_for_derivation$vars, aliases_list$solar_radiation_aliases)))) {}
+      if (isTRUE(any(match(vars_for_derivation$vars, .aliases_list$solar_radiation_aliases)))) {}
 
-      if (isTRUE(any(match(vars_for_derivation$vars, aliases_list$PET_aliases)))) {
+      if (isTRUE(any(match(vars_for_derivation$vars, .aliases_list$PET_aliases)))) {
 
         # Calculating monthly PET
         # The following code takes the function in EcoHydRology and applies
@@ -745,7 +745,7 @@ derive_rasters <- function(missing_vars,
           dplyr::filter(vars == 'PET')
 
         PET_rasters <-
-          plyr::alply(PET_vars, 1, function(x, sep_in = separator){
+          plyr::alply(PET_vars, 1, function(x, sep_in = .separator){
 
             tmax_year_scenario <-
               paste('tmax', x$year, x$scenario, sep = sep_in) %>%
@@ -765,14 +765,14 @@ derive_rasters <- function(missing_vars,
               plyr::alply(c(1:12), 1, function(j) {
 
                 lat <- raster::values(dependencies$lat) * pi/180
-                evap <- raster::raster(cropped_raster_list[[tmax_year_scenario]], 1)
+                evap <- raster::raster(.cropped_raster_list[[tmax_year_scenario]], 1)
                 slope <- raster::values(dependencies$slope)
                 aspect <- raster::values(dependencies$aspect)
-                Tmax <- raster::values(raster::subset(cropped_raster_list[[tmax_year_scenario]], j))/10
-                Tmin <- raster::values(raster::subset(cropped_raster_list[[tmin_year_scenario]], j))/10
+                Tmax <- raster::values(raster::subset(.cropped_raster_list[[tmax_year_scenario]], j))/10
+                Tmin <- raster::values(raster::subset(.cropped_raster_list[[tmin_year_scenario]], j))/10
                 d <- data.frame(day = (30 * j) - 15, Tmin, Tmax, slope, aspect, lat) # day at the midpoint of each month
                 d[is.na(d)] <- 0
-                Es_PET <- EcoHydRology::PET_fromTemp(Jday = d$day, Tmax_C = d$Tmax, Tmin_C = d$Tmin, lat_radians = d$lat, aspect = d$aspect, slope = d$slope) * 1000
+                suppressWarnings(Es_PET <- EcoHydRology::PET_fromTemp(Jday = d$day, Tmax_C = d$Tmax, Tmin_C = d$Tmin, lat_radians = d$lat, aspect = d$aspect, slope = d$slope) * 1000) # A bug in EcoHydRology prints an annoying warning.
                 raster::values(evap) <- Es_PET
                 raster::raster(evap)
                 names(evap) <- paste("PET", j, sep = "")
@@ -797,16 +797,16 @@ derive_rasters <- function(missing_vars,
 
       }
 
-      if (isTRUE(any(match(vars_for_derivation$vars, aliases_list$AET_aliases)))) {
+      if (isTRUE(any(match(vars_for_derivation$vars, .aliases_list$AET_aliases)))) {
 
         # Estimating AET using a simple bucket model # Duncan Golicher code:
         # AET is Actual evapotranspiration and always lower than PET potential evapotranspiration
         # and can be much lower when the soil profile is well below field capacity.
 
-        AET_vars <- dplyr::filter(missing_vars, vars == "AET")
+        AET_vars <- dplyr::filter(.absent_vars, vars == "AET")
 
         AET_rasters <-
-          plyr::alply(AET_vars, 1, function(x, sep_in = separator){
+          plyr::alply(AET_vars, 1, function(x, sep_in = .separator){
 
             PET_year_scenario <-
               paste('PET', x$year, x$scenario, sep = sep_in) %>%
@@ -827,7 +827,7 @@ derive_rasters <- function(missing_vars,
                 mn <- 1 + i %/% 30                                # %/% indicates integer division
                 NewAET <- Bucket
                 NewBucket <- raster::values(Bucket)
-                rain <- raster::values(raster::subset(cropped_raster_list[[prec_year_scenario]], mn))/30
+                rain <- raster::values(raster::subset(.cropped_raster_list[[prec_year_scenario]], mn))/30
                 alpha <- (NewBucket - 200)/300
                 evap <- raster::values(raster::subset(dependencies[[PET_year_scenario]]/100, mn)) * alpha * 0.8   #     A fudge factor for stomatal control.
                 NewBucket <- NewBucket + (rain) - evap
@@ -860,12 +860,12 @@ derive_rasters <- function(missing_vars,
 
       }
 
-      if (isTRUE(any(match(vars_for_derivation$vars, aliases_list$CWD_aliases)))) {
+      if (isTRUE(any(match(vars_for_derivation$vars, .aliases_list$CWD_aliases)))) {
 
-        CWD_vars <- dplyr::filter(missing_vars, vars == "CWD")
+        CWD_vars <- dplyr::filter(.absent_vars, vars == "CWD")
 
         CWD_rasters <-
-          plyr::alply(CWD_vars, 1, function(x, sep_in = separator){
+          plyr::alply(CWD_vars, 1, function(x, sep_in = .separator){
 
             PET_year_scenario <-
               paste('PET', x$year, x$scenario, sep = sep_in) %>%

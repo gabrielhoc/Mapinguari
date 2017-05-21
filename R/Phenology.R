@@ -29,7 +29,7 @@
 #'
 #'    PhenFUN <- function(x) 1/(1 + exp((26 - x)/2))
 #'
-#'     Phenolohy(FulanusEcoRasters,
+#'     Phenology(FulanusEcoRasters,
 #'     PhenFUN,
 #'     Phen_args = list(x = 'prec'))
 #'
@@ -45,20 +45,55 @@ Phenology <- function(raster_list,
     final_list <-
       lapply(raster_list, function(x){
 
+        split_vars <-
+          x %>%
+          names() %>%
+          stringr::str_split('_') %>%
+          lapply(`[`, 1)
+
+        unique_split_vars <-
+          unique(split_vars)
+
+        separate_list <-
+          lapply(unique_split_vars, function(y){
+
+            which(split_vars == y) %>%
+              x[[.]] %>%
+              raster::stack()
+
+          }
+          )
+
+        names(separate_list) <- unique_split_vars
+
+        non_fixed_logical <-
+          lapply(separate_list, function(u) length(names(u)) == 12) %>%
+          unlist()
+
+        non_fixed_list <- separate_list[which(non_fixed_logical)]
+
+        non_fixed_names <- names(separate_list)[which(non_fixed_logical)]
+
+        names(non_fixed_list) <- non_fixed_names
+
+        fixed_list <- separate_list[which(!non_fixed_logical)]
+
+        fixed_names <- names(separate_list)[which(!non_fixed_logical)]
+
+        names(fixed_list) <- fixed_names
+
+        vars_only <-
+          non_fixed_list[names(non_fixed_list) == Phen_args] %>%
+          `[[`(1)
+
         Phen_logical <-
-          plyr::alply(1:length(names(x)), 1, function(i) {
-
-            raster::calc(x = x[[i]], fun = PhenFUN)
-
-          } # close function
-          ) # close alply
-
-        raster::plot(raster::stack(Phen_logical))
+          raster::calc(x = vars_only, fun = PhenFUN) %>%
+          raster::stack()
 
         Var_logical <-
-          plyr::alply(1:length(names(x)), 1, function(i) {
+          lapply(non_fixed_list, function(z) {
 
-            x[[i]] * Phen_logical[[i]]
+            plyr::alply(1:12, 1, function(i) z[[i]] * Phen_logical[[i]])
 
           } # close function
           ) # close alply
@@ -71,15 +106,14 @@ Phenology <- function(raster_list,
           sum()
 
         Var_season <-
-          sum(raster::stack(Var_logical))/number_months
+          lapply(Var_logical, function(w) sum(raster::stack(w))/number_months)
 
-        Phen_logical_negative <-
-          lapply(Phen_logical, function(x) 1 - x)
+        Phen_logical_negative <- 1 - Phen_logical
 
         Var_logical_negative <-
-          plyr::alply(1:length(names(x)), 1, function(i) {
+          lapply(non_fixed_list, function(z) {
 
-            x[[i]] * Phen_logical_negative[[i]]
+            plyr::alply(1:12, 1, function(i) z[[i]] * Phen_logical_negative[[i]])
 
           } # close function
           ) # close alply
@@ -90,9 +124,22 @@ Phenology <- function(raster_list,
           sum()
 
         Var_non_season <-
-          sum(raster::stack(Var_logical_negative))/number_months_negative
+          lapply(Var_logical_negative, function(w) sum(raster::stack(w))/number_months_negative )
 
-        return(raster::stack(Var_season, Var_non_season, number_months))
+        grouped_by_var <-
+        lapply(1:length(Var_season), function(i){
+
+          non_fixed_output <-
+          raster::stack(Var_season[[i]], Var_non_season[[i]])
+
+          names(non_fixed_output) <- paste(unique_split_vars[[i]], c("Season", "NonSeason"), sep = "_")
+
+          non_fixed_output
+
+        }
+          )
+
+        all_output <- raster::stack(append(grouped_by_var, fixed_list))
 
       }
       )
