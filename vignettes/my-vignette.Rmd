@@ -122,6 +122,9 @@ Back to *Fulanus*, we measured the maximum running speed of several individuals 
 
 ```{r}
 head(FulanusPhysiology)
+
+# I will multiply temperatures by 10 so they are on the same scale as the rasters
+FulanusPhysiology$temp <- FulanusPhysiology$temp * 10
 ```
 
 Note that we also attributed a number to each lizard to keep track of which lizard did which trial. That is important because, since the same lizard ran different trials, the data points are not independent and we have to account for that when building our model.
@@ -155,7 +158,59 @@ This closure can be combined with the output from `Ecology` to create a raster o
 
 # EcoPhysiology
 
+`EcoPhysiology` does the link between your physiological model and your spatial environmental data. It will apply any function to each year/scenario combination, as long as the variables necessary for the model are present. Sometimes you might name variables differently on your model and on your rasters. To deal with this situation, the argument `Perf_args` acts as a dictionary. It is a named list, in which the names are the variables in the model and the arguments are character strings of the variables in the rasters. You might also supply a numerical constant instead of a character string. That way, this variable will be set to that value for all calculations. That might be useful for example, if your model contain individual covariates such as body size, and you want to set a standard value for every calculation, for example, average body size.
+
+```{r, message = FALSE, warning = FALSE}
+FulanusEcoRasters_month <-
+   Ecology(
+     raster_source = my_directory,
+     ext = FulanusDistribution,
+     margin = 5,
+     non_fixed_var = c('tmin', 'tmax', 'prec', 'PET', 'AET', 'CWD'),
+     years = c('present', '2050', '2070'),
+     scenarios = c('rcp26', 'rcp45', 'rcp85'),
+     phenology = 'month',
+     reorder = TRUE,
+     derive = TRUE)
+
+
+Perf_rasters_month <-
+  EcoPhysiology(raster_source = FulanusEcoRasters_month,
+    Perf_args = list(temp = 'tmax', size = mean(FulanusPhysiology$size)),
+    separator = '_',
+    PerfFUN = my_tpc)
+
+raster::plot(Perf_rasters_month[[1]])
+```
+
 #Phenology
+
+However, we know that the most crucial period for *Fulanus* population dynamics is their breeding period. They wil breed only on certain climatic conditions, what will cause their breeding period to vary spatially and temporally. In order to account for that, function `Phenology` partition month rasters according to the specified breeding period. You can input the starting and ending month of the phenological event with arguments `StartSeason` and `StopSeason`. This will make the partitioning uniform inside and accross rasters. If you want to account for spatial and temporal variation, you have to use argument `PhenFUN`, which accepts functions relating for local conditions to a binary representation of if the organisms are experiencing the phenological event or not. It could be a logistic model or a function setting hard thresholds, for example. The function `Phenology` can also be called from inside `Ecology` or `EcoPhysiology`, partitioning the rasters as they are output. `Phenology` has also a `Phen_args` argument, which works in the same way as `Perf_args` described above
+
+```{r, message = FALSE, warning = FALSE, fig.height = 6, fig.width = 6}
+
+# Fix this later: simulate data on breeding seasons and environmental conditions, then fit this model
+
+PhenFUN1 <- function(x) 1/(1 + exp((300 - x)/2))
+
+Seasons_by_rain <-
+Phenology(raster_list = FulanusEcoRasters_month,
+  PhenFUN = PhenFUN1 ,
+  Phen_args = list(x = 'prec'))
+
+# Let's say we are only interested on the periods when performance is positive.
+
+PhenFUN2 <- function(x) ifelse(x > 0, 1, 0)
+
+Seasons_by_performance <-
+Phenology(raster_list = Perf_rasters_month,
+  PhenFUN = PhenFUN2 ,
+  Phen_args = list(x = 'Perf'))
+
+raster::plot(Seasons_by_rain[[1]])
+
+raster::plot(Seasons_by_performance[[1]])
+```
 
 ---------------------------------
 

@@ -43,7 +43,7 @@ FulanusEcoRasters <-
 
    PhenFUN <- function(x) 1/(1 + exp((26 - x)/2))
 
-    Phenolohy(FulanusEcoRasters,
+    Phenology(FulanusEcoRasters,
     PhenFUN,
     Phen_args = list(x = 'prec'))
 
