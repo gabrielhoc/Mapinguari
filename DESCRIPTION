@@ -9,7 +9,7 @@ Authors@R: c(
 Description: More about what it does (maybe more than one line)
     Use four spaces when indenting paragraphs within the Description.
 Depends: R (>= 3.3.3)
-License: What license is it under?
+License: GPL-2
 Encoding: UTF-8
 LazyData: true
 URL: http://github.com/gabrielhoc/Mapinguari-development
