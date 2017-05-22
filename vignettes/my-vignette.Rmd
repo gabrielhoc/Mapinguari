@@ -11,7 +11,7 @@ vignette: >
 
 # The fate of *Fulanus*
 
-*Fulanus beltranus* is a fictional species of lizard from central Africa. We would like to find out how this species is going to do in different climate change scenarios. First let's look at the points where it is currently known to occurr. To access the distribution data, we must load package Mapinguari.
+*Fulanus beltranus* is a fictional species of lizard from Democratic Republic of Congo. We would like to find out how this species is going to do in different climate change scenarios. First let's look at the points where it is currently known to occurr. To access the distribution data, we must load package Mapinguari.
 
 ```{r, message = FALSE, warning = FALSE, fig.height = 6, fig.width = 6}
 library(Mapinguari)
@@ -21,7 +21,7 @@ Fulanus_bbox <- ggmap::make_bbox(lat = Lat, lon = Lon, data = FulanusDistributio
 Fulanus_big <- ggmap::get_map(location = Fulanus_bbox, source = "google", maptype = "terrain")
 
 ggmap::ggmap(Fulanus_big) +
-  ggplot2::geom_point(data = FulanusDistribution, mapping = ggplot2::aes(x = Lon, y = Lat), size = 0.5, colour = 'red')
+  ggplot2::geom_point(data = FulanusDistribution, mapping = ggplot2::aes(x = Lon, y = Lat), size = 1, colour = 'red')
 ```
 
 # function Distribution
@@ -121,6 +121,8 @@ head(FulanusPhysiology)
 
 # I will multiply temperatures by 10 so they are on the same scale as the rasters
 FulanusPhysiology$temp <- FulanusPhysiology$temp * 10
+
+head(FulanusPhysiology)
 ```
 
 Note that we also attributed a number to each lizard to keep track of which lizard did which trial. That is important because, since the same lizard ran different trials, the data points are not independent and we have to account for that when building our model.
@@ -187,32 +189,49 @@ However, we know that the most crucial period for *Fulanus* population dynamics 
 
 # Fix this later: simulate data on breeding seasons and environmental conditions, then fit this model
 
-PhenFUN1 <- function(x) 1/(1 + exp((300 - x)/2))
+PhenFUN1 <- function(x) round(1/(1 + exp((150 - x)/2)), 2)
 
 Seasons_by_rain <-
-Phenology(raster_list = FulanusEcoRasters_month,
-  PhenFUN = PhenFUN1 ,
-  Phen_args = list(x = 'prec'))
+  lapply(FulanusEcoRasters_month, 
+    Phenology,
+    PhenFUN = PhenFUN1 ,
+    Phen_args = list(x = 'prec'))
 
-# Let's say we are only interested on the periods when performance is positive.
+raster::plot(Seasons_by_rain$present$Season_length)
+raster::plot(Seasons_by_rain$present$tmax_Season)
+raster::plot(Seasons_by_rain$present$tmax_NonSeason)
+```
 
-PhenFUN2 <- function(x) ifelse(x > 0, 1, 0)
+```{r}
+# Let's say we are only interested on the periods when performance is bigger than 200.
+
+PhenFUN2 <- function(x) ifelse(x > 200, 1, 0)
 
 Seasons_by_performance <-
-Phenology(raster_list = Perf_rasters_month,
-  PhenFUN = PhenFUN2 ,
-  Phen_args = list(x = 'Perf'))
+  lapply(Perf_rasters_month, 
+    Phenology,
+    PhenFUN = PhenFUN2 ,
+    Phen_args = list(x = 'Perf'))
 
-raster::plot(Seasons_by_rain[[1]])
-
-raster::plot(Seasons_by_performance[[1]])
+raster::plot(Seasons_by_performance$present$Season_length)
+raster::plot(Seasons_by_performance$present$Perf_Season)
+raster::plot(Seasons_by_performance$present$Perf_NonSeason)
 ```
+
+Note that the season by performance maps have blank spots both in the Season and NonSeason rasters, while the season by rain maps have blank spots only on the Season raster. Why is that? Let's look at the values for the season length at the present for both the `Seasons_by_rain` and `Seasons_by_performance`.
+
+```{r}
+Seasons_by_rain$present$Season_length
+Seasons_by_performance$present$Season_length
+```
+
+You can see that the season by rain raster ranges from 0 to 9, that means that the species is unable to breed in some places, and the places where it breeds for longer, the breeding season lasts 9 months. While the season by performance raster ranges from 0 to 12, that means there are places where the species can't breed and places where the species can breed all year long. That shows on the map as the blank spots. If the values are 0 on the Season raster, it means the species can't breed in that location, if they are 0 in the NonSeason raster, it means they breed all year long in that location.
 
 ---------------------------------
 
 # Theory
 
-**This is a theoretical description of the package from my thesis proposal, I need to update it**
+**This is a theoretical description of the package from my thesis proposal, I need to update function names, format the formulas and citations, etc**
 
 # Package name: 
 
