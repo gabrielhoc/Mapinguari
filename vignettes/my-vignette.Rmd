@@ -164,9 +164,8 @@ FulanusEcoRasters_month <-
      raster_source = my_directory,
      ext = FulanusDistribution,
      margin = 5,
-     non_fixed_var = c('tmin', 'tmax', 'prec', 'PET', 'AET', 'CWD'),
-     years = c('present', '2050', '2070'),
-     scenarios = c('rcp26', 'rcp45', 'rcp85'),
+     non_fixed_var = c('tmax', 'prec'),
+     years = 'present',
      phenology = 'month',
      reorder = TRUE,
      derive = TRUE)
@@ -202,10 +201,10 @@ raster::plot(Seasons_by_rain$present$tmax_Season)
 raster::plot(Seasons_by_rain$present$tmax_NonSeason)
 ```
 
-```{r}
-# Let's say we are only interested on the periods when performance is bigger than 200.
+```{r, fig.height = 6, fig.width = 6}
+# Let's say we are only interested on the periods when performance is bigger than 80.
 
-PhenFUN2 <- function(x) ifelse(x > 200, 1, 0)
+PhenFUN2 <- function(x) ifelse(x > 80, 1, 0)
 
 Seasons_by_performance <-
   lapply(Perf_rasters_month, 
