@@ -23,7 +23,7 @@
 #'     reorder = TRUE,
 #'     separator = "_")
 #'
-#'     Phenolohy(FulanusEcoRasters,
+#'     Phenology(FulanusEcoRasters,
 #'     StartSeason = 4,
 #'     StopSeason = 11)
 #'

@@ -41,7 +41,7 @@ FulanusEcoRasters <-
     StartSeason = 4,
     StopSeason = 11)
 
-   PhenFUN <- function(x) 1/(1 + exp((26 - x)/2))
+   PhenFUN <- function(x) 1/(1 + exp((150 - x)/2))
 
     Phenology(FulanusEcoRasters,
     PhenFUN,
