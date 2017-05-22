@@ -2,7 +2,7 @@
 #'
 #' \code{Phenology} Groups rasters by duration of phenological event.
 #'
-#' @param raster_list list of RasterStacks. Only accept stacks with 12 layers.
+#' @param raster_list RasterStack. Only accept stacks with 12 layers.
 #' @param Phen_args named list of strings. Correspondence between PhenFUN arguments and raster names.
 #' @param PhenFUN function. Function relating phenological event to environmental conditions.
 #' @param StartSeason numerical. Month of start of a phenological event.
@@ -23,13 +23,21 @@
 #'     reorder = TRUE,
 #'     separator = "_")
 #'
-#'     Phenology(FulanusEcoRasters,
+#' # If you have a list of stacks, use each element or \code{lapply}
+#'
+#'     Phenology(FulanusEcoRasters[[1]],
 #'     StartSeason = 4,
 #'     StopSeason = 11)
 #'
+#'   Seasons_by_performance <-
+#'    lapply(FulanusEcoRasters,
+#'    Phenology,
+#'    StartSeason = 4,
+#'    StopSeason = 11)
+#'
 #'    PhenFUN <- function(x) 1/(1 + exp((150 - x)/2))
 #'
-#'     Phenology(FulanusEcoRasters,
+#'     Phenology(FulanusEcoRasters[[1]],
 #'     PhenFUN,
 #'     Phen_args = list(x = 'prec'))
 #'
