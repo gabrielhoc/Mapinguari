@@ -23,8 +23,6 @@ Physiology(formula, data, type, fixed = NULL, random = NULL, start = NULL,
 \item{correlation}{named list. See \code{mgcv::gamm} and \code{nlme::nlme}}
 
 \item{...}{further parameters for \code{mgcv::gamm} or \code{nlme::nlme}}
-
-\item{separator}{character. Character that separates variable names, years and scenarios.}
 }
 \value{
 Returns a list of raster stacks for the variables required, organized by year/scenario combination.

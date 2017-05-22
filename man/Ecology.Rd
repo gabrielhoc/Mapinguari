@@ -61,17 +61,18 @@ FulanusEcoRasters_month <-
   Ecology(
     raster_source = "/Users/gabriel/Documents/Mapinguari-development/global_grids_10_minutes",
     ext = FulanusDistribution,
+    margin = 5,
     non_fixed_var = c('prec', 'tmin', 'tmax'),
     fixed_var = 'alt',
     years = c("present", '2050', '2070'),
     scenarios = c('rcp26', 'rcp45', 'rcp85'),
     phenology = 'month',
-    reorder = TRUE,
-    separator = "_")
+    reorder = TRUE)
 
 FulanusEcoRasters_season <-
   Ecology(raster_source = "/Users/gabriel/Documents/Mapinguari-development/global_grids_10_minutes/",
     ext = FulanusDistribution,
+    margin = 5,
     non_fixed_var = c('prec', 'tmin', 'tmax', 'PET', 'AET', 'CWD'),
     fixed_var = 'alt',
     years = c("present", '2050', '2070'),
@@ -79,6 +80,7 @@ FulanusEcoRasters_season <-
     phenology = 'season',
     StartSeason = 3,
     StopSeason = 8,
-    derive = TRUE)
+    derive = TRUE,
+    reorder = TRUE)
 
 }

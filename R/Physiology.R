@@ -10,7 +10,6 @@
 #' @param start named list. See \code{nlme::nlme}
 #' @param correlation named list. See \code{mgcv::gamm} and \code{nlme::nlme}
 #' @param ... further parameters for \code{mgcv::gamm} or \code{nlme::nlme}
-#' @param separator character. Character that separates variable names, years and scenarios.
 #'
 #' @return Returns a list of raster stacks for the variables required, organized by year/scenario combination.
 #'
