@@ -17,12 +17,10 @@ BugReports: http://github.com/gabrielhoc/Mapinguari-development/issues
 Suggests: knitr,
     rmarkdown
 VignetteBuilder: knitr
-Imports: assertthat,
-    dplyr,
+Imports:dplyr,
     EcoHydRology,
     ggmap,
     ggplot2,
-    knitr,
     magrittr,
     mgcv,
     nlme,
