@@ -17,7 +17,8 @@ BugReports: http://github.com/gabrielhoc/Mapinguari-development/issues
 Suggests: knitr,
     rmarkdown
 VignetteBuilder: knitr
-Imports:dplyr,
+Imports:backports,
+    dplyr,
     EcoHydRology,
     ggmap,
     ggplot2,
@@ -28,6 +29,7 @@ Imports:dplyr,
     purrr,
     qdap,
     raster,
+    rgdal,
     rlist,
     stringr,
     tibble

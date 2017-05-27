@@ -5,7 +5,7 @@
 #' @param formula formula. Model formula.
 #' @param data data frame. Table containing variables in model formula.
 #' @param type character. Algorithm used for model. 'GAMM' or 'NLME'
-#' @param fixed named list. See \code{mgcv::gamm}
+#' @param fixed named list. See \code{nlme::nlme}
 #' @param random named list. See \code{mgcv::gamm} and \code{nlme::nlme}
 #' @param start named list. See \code{nlme::nlme}
 #' @param correlation named list. See \code{mgcv::gamm} and \code{nlme::nlme}
