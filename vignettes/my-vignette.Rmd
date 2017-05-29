@@ -18,7 +18,7 @@ library(Mapinguari)
 
 Fulanus_bbox <- ggmap::make_bbox(lat = Lat, lon = Lon, data = FulanusDistribution, f = 0.2)
 
-Fulanus_big <- ggmap::get_map(location = Fulanus_bbox, source = "google", maptype = "hybrid")
+Fulanus_big <- ggmap::get_map(location = Fulanus_bbox, source = "google", maptype = "terrain")
 
 ggmap::ggmap(Fulanus_big) +
   ggplot2::geom_point(data = FulanusDistribution, mapping = ggplot2::aes(x = Lon, y = Lat), size = 1, colour = 'red')
