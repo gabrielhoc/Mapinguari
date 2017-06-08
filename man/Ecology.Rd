@@ -5,11 +5,12 @@
 \title{Retrieve and organize spatial environmental information.}
 \usage{
 Ecology(raster_source, ext = raster::extent(-180, 180, -60, 90), margin = 0,
-  resolution = 10, non_fixed_var = NA, fixed_var = NA, years = NA,
-  scenarios = NA, baseline = c("present", "baseline"), separator = "_",
-  projection_model = "MP", download = FALSE, derive = FALSE,
-  StartSeason = 0, StopSeason = 12, phenology = "month",
-  reorder = FALSE, PhenFUN = NULL, Phen_args = NULL)
+  resolution = 10, non_fixed_var = NA, fixed_var = NA,
+  years = "present", scenarios = NA, baseline = c("present", "baseline"),
+  separator = "_", projection_model = "MP", download = FALSE,
+  derive = FALSE, StartSeason = 0, StopSeason = 12, reorder = FALSE,
+  PhenFUN = NULL, Phen_args = NULL, Phen_summary = c("mean", "sd"),
+  Phen_method = "month")
 }
 \arguments{
 \item{raster_source}{character or list of RasterStack. You can either input a path to a folder with the required rasters or a list of RasterStack organized by year/scenario.}
@@ -42,13 +43,13 @@ Ecology(raster_source, ext = raster::extent(-180, 180, -60, 90), margin = 0,
 
 \item{StopSeason}{numerical. Month of end of a phenological event.}
 
-\item{phenology}{character. Either 'month', 'year' or 'season'. 'month' will keep rasters that vary by month as they are, 'year' will average all months, 'season' will average inside and outside month range determined by 'StartSeason' and 'StopSeason'.}
-
 \item{reorder}{logical. If TRUE, will use last two characters of layer names in RasterStacks with 12 layers to order them in ascending order.}
 
 \item{PhenFUN}{function. Function relating phenological event to environmental conditions.}
 
 \item{Phen_args}{named list of strings. Correspondence between PhenFUN arguments and raster names.}
+
+\item{Phen_method}{character. Either 'month', 'year' or 'season'. 'month' will keep rasters that vary by month as they are, 'year' will average all months, 'season' will average inside and outside month range determined by 'StartSeason' and 'StopSeason'.}
 }
 \value{
 Returns a list of raster stacks for the variables required, organized by year/scenario combination.
@@ -66,8 +67,10 @@ FulanusEcoRasters_month <-
     fixed_var = 'alt',
     years = c("present", '2050', '2070'),
     scenarios = c('rcp26', 'rcp45', 'rcp85'),
-    phenology = 'month',
-    reorder = TRUE)
+    Phen_method = 'month',
+    reorder = TRUE,
+    PhenFUN = NULL,
+    Phen_args = NULL)
 
 FulanusEcoRasters_season <-
   Ecology(raster_source = "/Users/gabriel/Documents/Mapinguari-development/global_grids_10_minutes/",
@@ -77,7 +80,24 @@ FulanusEcoRasters_season <-
     fixed_var = 'alt',
     years = c("present", '2050', '2070'),
     scenarios = c('rcp26', 'rcp45', 'rcp85'),
-    phenology = 'season',
+    Phen_method = 'season',
+    StartSeason = 3,
+    StopSeason = 8,
+    derive = TRUE,
+    reorder = TRUE,
+    PhenFUN = NULL,
+    Phen_args = NULL)
+
+    # create example
+    FulanusEcoRasters_season <-
+  Ecology(raster_source = "/Users/gabriel/Documents/Mapinguari-development/global_grids_10_minutes/",
+    ext = FulanusDistribution,
+    margin = 5,
+    non_fixed_var = c('prec', 'tmin', 'tmax', 'PET', 'AET', 'CWD'),
+    fixed_var = 'alt',
+    years = c("present", '2050', '2070'),
+    scenarios = c('rcp26', 'rcp45', 'rcp85'),
+    Phen_method = 'season',
     StartSeason = 3,
     StopSeason = 8,
     derive = TRUE,

@@ -1,6 +1,6 @@
 #' Creates functions relating environment to physiology.
 #'
-#' \code{Physiology} Creates functions relating environment to physiology.
+#' \code{Physiology} Creates functions relating environment to physiology. You can run multiple models if you input their arguments as lists.
 #'
 #' @param formula formula. Model formula.
 #' @param data data frame. Table containing variables in model formula.
@@ -11,15 +11,51 @@
 #' @param correlation named list. See \code{mgcv::gamm} and \code{nlme::nlme}
 #' @param ... further parameters for \code{mgcv::gamm} or \code{nlme::nlme}
 #'
-#' @return Returns a list of raster stacks for the variables required, organized by year/scenario combination.
-#'
+#' @return Returns a tibble containing model specifications, statistics and a predictor function.
 #' @examples
 #' perf_functions <-
-#' Physiology(formula = performance ~ s(temp, bs = 'cs') + size,
-#'  data = FulanusPhysiology,
-#'  type = 'GAMM',
-#'  random = list(id = ~ 1)
-#' )
+#'   Physiology(formula = performance ~ s(temp, bs = 'cs') + size,
+#'     data = FulanusPhysiology,
+#'     type = 'GAMM',
+#'     random = list(id = ~ 1)
+#'   )
+#'
+#' perf_functions <-
+#'   Physiology(formula = performance ~ s(temp, bs = 'cs') + size,
+#'     data = FulanusPhysiology,
+#'     type = 'GAMM',
+#'     random = list(id = ~ 1),
+#'     correlation = list(nlme::corAR1(form = ~ 1 | id))
+#'   )
+#'
+#' formula_list <-
+#'   list(
+#'     performance ~ s(temp, bs = 'cs'),
+#'     performance ~ s(temp, bs = 'cs') + size,
+#'     performance ~ s(temp, bs = 'cs') + hydration,
+#'     performance ~ s(temp, bs = 'cs') + hydration + size
+#'     )
+#'
+#' perf_functions <-
+#'   Physiology(formula = formula_list,
+#'     data = FulanusPhysiology,
+#'     type = 'GAMM',
+#'     random = list(id = ~ 1),
+#'     correlation = list(nlme::corAR1(form = ~ 1 | id)
+#'   ))
+#'
+#' correlation_list <- list(a = nlme::corAR1(form = ~ 1 | id),
+#'   b = nlme::corAR1(0.1, form = ~ 1 | id),
+#'   c = nlme::corARMA(form = ~ 1 | id),
+#'   d = nlme::corARMA(0.1, form = ~ 1 | id))
+#'
+#' perf_functions <-
+#'   Physiology(formula = formula_list,
+#'     data = FulanusPhysiology,
+#'     type = 'GAMM',
+#'     random = list(id = ~ 1),
+#'     correlation = correlation_list
+#'   )
 #'
 #' @export
 Physiology <- function(formula,

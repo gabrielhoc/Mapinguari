@@ -20,7 +20,7 @@
 #'     fixed_var = 'alt',
 #'     years = c("present", '2050', '2070'),
 #'     scenarios = c('rcp26', 'rcp45', 'rcp85'),
-#'     phenology = 'month',
+#'     Phen_method = 'month',
 #'     reorder = TRUE,
 #'     separator = '_')
 #'

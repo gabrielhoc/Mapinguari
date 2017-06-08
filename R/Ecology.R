@@ -19,7 +19,7 @@
 #' @param derive logical. Should missing variables that can be derived be derived?
 #' @param StartSeason numerical. Month of start of a phenological event.
 #' @param StopSeason numerical. Month of end of a phenological event.
-#' @param phenology character. Either 'month', 'year' or 'season'. 'month' will keep rasters that vary by month as they are, 'year' will average all months, 'season' will average inside and outside month range determined by 'StartSeason' and 'StopSeason'.
+#' @param Phen_method character. Either 'month', 'year' or 'season'. 'month' will keep rasters that vary by month as they are, 'year' will average all months, 'season' will average inside and outside month range determined by 'StartSeason' and 'StopSeason'.
 #' @param reorder logical. If TRUE, will use last two characters of layer names in RasterStacks with 12 layers to order them in ascending order.
 #' @param Phen_args named list of strings. Correspondence between PhenFUN arguments and raster names.
 #' @param PhenFUN function. Function relating phenological event to environmental conditions.
@@ -36,8 +36,10 @@
 #'     fixed_var = 'alt',
 #'     years = c("present", '2050', '2070'),
 #'     scenarios = c('rcp26', 'rcp45', 'rcp85'),
-#'     phenology = 'month',
-#'     reorder = TRUE)
+#'     Phen_method = 'month',
+#'     reorder = TRUE,
+#'     PhenFUN = NULL,
+#'     Phen_args = NULL)
 #'
 #' FulanusEcoRasters_season <-
 #'   Ecology(raster_source = "/Users/gabriel/Documents/Mapinguari-development/global_grids_10_minutes/",
@@ -47,7 +49,24 @@
 #'     fixed_var = 'alt',
 #'     years = c("present", '2050', '2070'),
 #'     scenarios = c('rcp26', 'rcp45', 'rcp85'),
-#'     phenology = 'season',
+#'     Phen_method = 'season',
+#'     StartSeason = 3,
+#'     StopSeason = 8,
+#'     derive = TRUE,
+#'     reorder = TRUE,
+#'     PhenFUN = NULL,
+#'     Phen_args = NULL)
+#'
+#'     # create example
+#'     FulanusEcoRasters_season <-
+#'   Ecology(raster_source = "/Users/gabriel/Documents/Mapinguari-development/global_grids_10_minutes/",
+#'     ext = FulanusDistribution,
+#'     margin = 5,
+#'     non_fixed_var = c('prec', 'tmin', 'tmax', 'PET', 'AET', 'CWD'),
+#'     fixed_var = 'alt',
+#'     years = c("present", '2050', '2070'),
+#'     scenarios = c('rcp26', 'rcp45', 'rcp85'),
+#'     Phen_method = 'season',
 #'     StartSeason = 3,
 #'     StopSeason = 8,
 #'     derive = TRUE,
@@ -56,25 +75,37 @@
 #' @export
 
 Ecology <- function(raster_source,
-  ext = raster::extent(-180, 180, -60, 90),
+  ext = raster::extent(-180, 180, -60, 90), # add as a vector instead, option for NULL (no cropping)
   margin = 0,
   resolution = 10,
-  non_fixed_var = NA,
+  non_fixed_var = NA, # change NA for NULL, change is.na to is.null
   fixed_var = NA,
-  years = NA,
+  years = 'present',
   scenarios = NA,
   baseline = c("present", "baseline"), # years not subject to scenarios
   separator = "_",
   projection_model = 'MP',
   download = FALSE,
   derive = FALSE,
-  StartSeason = 0,
+  StartSeason = 0, # do it for multiple seasons
   StopSeason = 12,
-  phenology = 'month',
   reorder = FALSE,
   PhenFUN = NULL,
-  Phen_args = NULL
+  Phen_args = NULL,
+  Phen_summary = c('mean','sd'),
+  Phen_method = 'month'
 ) {
+
+  Phen_summary_list <- list(
+
+    mean = function(r) raster::calc(r, mean, na.rm = TRUE),
+    total = function(r) raster::calc(r, sum, na.rm = TRUE),
+    sd = function(r) raster::calc(r, sd, na.rm = TRUE),
+    cvar = function(r) raster::calc(r, sd, na.rm = TRUE) / raster::calc(r, mean, na.rm = TRUE)
+
+  )
+
+  Phen_summary_list_selected <- Phen_summary_list[Phen_summary]
 
   # variable aliases
 
@@ -82,18 +113,21 @@ Ecology <- function(raster_source,
     tmax_aliases = c("tmax", "tx", "Tmax"),
     tmin_aliases = c("tmin", "tn", "Tmin"),
     prec_aliases = c("prec", "precip", "precipitation"),
-    bioclim_aliases = c("bio", "bioclim", "BioClim"),
+    bioclim_aliases = c("bioclim", "BioClim"),
     PET_aliases = c("PET", "pet"),
     AET_aliases = c("AET", "aet"),
     CWD_aliases = c("CWD", "cwd"),
-    solar_radiation_aliases = c("solar_radiation", "solarradation", "solar_rad", "solarrad", "srad"),
+    srad_aliases = c("srad", "solar_radiation", "solarradation", "solar_rad", "solarrad"),
     hours_of_sunlight_aliases = c("hours_of_sunlight", "sunlight_hours", "sunlighthours", "sun_hours", "sunhours", "day_length", "daylength"),
     slope_aliases = c("slope","Slope"),
     aspect_aliases = c("aspect", "Aspect"),
     lat_aliases = c("lat", "Lat", "latitude", "Latitude"),
     lon_aliases = c("lon", "Long", "long", "Lon", "longitude", "Longitude"),
-    alt_aliases = c("alt", "altitude")
+    alt_aliases = c("alt", "altitude"),
+    RH_aliases = c('RH', 'rh', 'humidity')
   )
+
+  # get list of all folders and match to the aliases, so I have paths in memory
 
   downloadable_vars <-
     list(tmax = aliases_list$tmax_aliases,
@@ -107,11 +141,11 @@ Ecology <- function(raster_source,
     slope = aliases_list$slope_aliases,
     aspect = aliases_list$aspect_aliases,
     hours_of_sunlight = aliases_list$hours_of_sunlight_aliases,
-    solar_radiation = aliases_list$solar_radiation_aliases,
     PET = aliases_list$PET_aliases,
     AET = aliases_list$AET_aliases,
-    CWD = aliases_list$CWD_aliases
-    )
+    CWD = aliases_list$CWD_aliases,
+    RH = aliases_list$RH_aliases
+  )
 
   # substitute aliases for standard names
 
@@ -122,14 +156,80 @@ Ecology <- function(raster_source,
   } # close function
   ) # close lapply
 
-  fixed_var <- qdap::mgsub(unlist(aliases_list), unlist(sub_list), fixed_var)
-  non_fixed_var <- qdap::mgsub(unlist(aliases_list), unlist(sub_list), non_fixed_var)
+  ##### qdap ####
+
+  spaste_qdap <- function (terms, trailing = TRUE, leading = TRUE)
+  {
+    if (leading) {
+      s1 <- " "
+    }
+    else {
+      s1 <- ""
+    }
+    if (trailing) {
+      s2 <- " "
+    }
+    else {
+      s2 <- ""
+    }
+    pas <- function(x) paste0(s1, x, s2)
+    if (is.list(terms)) {
+      z <- lapply(terms, pas)
+    }
+    else {
+      z <- pas(terms)
+    }
+    return(z)
+  }
+
+  mgsub_qdap <- function (pattern, replacement, text.var, leadspace = FALSE,
+    trailspace = FALSE, fixed = TRUE, trim = TRUE, order.pattern = fixed,
+    ...)
+  {
+    if (leadspace | trailspace)
+      replacement <- spaste_qdap(replacement, trailing = trailspace,
+        leading = leadspace)
+    if (fixed && order.pattern) {
+      ord <- rev(order(nchar(pattern)))
+      pattern <- pattern[ord]
+      if (length(replacement) != 1)
+        replacement <- replacement[ord]
+    }
+    if (length(replacement) == 1)
+      replacement <- rep(replacement, length(pattern))
+    for (i in seq_along(pattern)) {
+      text.var <- gsub(pattern[i], replacement[i], text.var,
+        fixed = fixed, ...)
+    }
+    if (trim)
+      text.var <- gsub("\\s+", " ", gsub("^\\s+|\\s+$", "",
+        text.var, perl = TRUE), perl = TRUE)
+    text.var
+  }
+
+  ################
+
+  fixed_var <- mgsub_qdap(unlist(aliases_list), unlist(sub_list), fixed_var)
+  non_fixed_var <- mgsub_qdap(unlist(aliases_list), unlist(sub_list), non_fixed_var)
 
   # Select extent by species distribution
 
-  if (class(ext) != "Extent") {
-    ext <- raster::extent((min(ext$Lon) - margin), (max(ext$Lon) + margin), (min(ext$Lat) - margin), (max(ext$Lat) + margin))
+  if (class(ext) == "numeric") {
+
+    ext <- raster::extent(ext)
+
   }
+
+  if (class(ext) == "data.frame" ) {
+
+    ext <- raster::extent(min(ext$Lon), max(ext$Lon), min(ext$Lat), max(ext$Lat))
+
+  }
+
+  ext[1] <- ext[1] - margin
+  ext[2] <- ext[2] + margin
+  ext[3] <- ext[3] - margin
+  ext[4] <- ext[4] + margin
 
   # Creates combinations of variables, years and scenarios.
 
@@ -137,7 +237,7 @@ Ecology <- function(raster_source,
     scenarios,
     non_fixed_var, fixed_var, baseline, separator)
 
-# Check for any derived variables
+  # Check for any derived variables
 
   derived_logical <-
     derivable_vars %>%
@@ -145,98 +245,99 @@ Ecology <- function(raster_source,
     match(vys_table$vars, .) %>%
     any()
 
- if (isTRUE(derived_logical)) {
+  if (isTRUE(derived_logical)) {
 
-   # create list of dependencies
+    # create list of dependencies
 
-   dependencies_list <- list(
-     latitude = "alt",
-     longitude = "alt",
-     slope = "alt",
-     aspect = "alt",
-     hours_of_sunlight = c("alt", "lat", "lon"),
-     solar_radiation = c("alt", "slope", "aspect"),
-     PET = c("tmin", "tmax", "lat", "alt", "slope", "aspect"),
-     AET = c("PET", "tmin", "tmax", "lat", "alt", "slope", "aspect"),
-     CWD = c("AET", "PET", "tmin", "tmax", "lat", "alt", "slope", "aspect")
-   )
+    dependencies_list <- list(
+      latitude = "alt",
+      longitude = "alt",
+      slope = "alt",
+      aspect = "alt",
+      hours_of_sunlight = c("alt", "lat", "lon"),
+      srad = c("alt", "slope", "aspect"),
+      PET = c("tmin", "tmax", "prec", "lat", "alt", "slope", "aspect"),
+      AET = c("PET", "tmin", "tmax", "prec", "lat", "alt", "slope", "aspect"),
+      CWD = c("AET", "PET", "tmin", "tmax", "prec", "lat", "alt", "slope", "aspect"),
+      RH = c('tmax', 'vapr')
+    )
 
-   fixed_list <- c("alt", "lat", "lon", "slope", "aspect" )
-   non_fixed_list <- c("tmin", "tmax", "PET", "AET")
+    fixed_list <- c("alt", "lat", "lon", "slope", "aspect")
+    non_fixed_list <- c("tmin", "tmax", "PET", "AET", 'RH', "vapr", "wind", "srad")
 
-   to_be_derived_table <-
-     derivable_vars %>%
-     unlist() %>%
-     `%in%`(vys_table$vars, .) %>%
-     `[`(vys_table, .,)
+    to_be_derived_table <-
+      derivable_vars %>%
+      unlist() %>%
+      `%in%`(vys_table$vars, .) %>%
+      `[`(vys_table, .,)
 
-  # Creates table for variables used as dependencies for derived variables
+    # Creates table for variables used as dependencies for derived variables
 
-  each_dependencies <-
-    plyr::alply(1:nrow(to_be_derived_table), 1, function(i){
+    each_dependencies <-
+      plyr::alply(1:nrow(to_be_derived_table), 1, function(i){
 
-      table_slice <-
-        to_be_derived_table %>%
-        dplyr::slice(i)
+        table_slice <-
+          to_be_derived_table %>%
+          dplyr::slice(i)
 
-      # Compare to aliases list to extract standard name
+        # Compare to aliases list to extract standard name
 
-      derivable_var <-
-        rapply(derivable_vars, function(x) {
+        derivable_var <-
+          rapply(derivable_vars, function(x) {
 
-          x %>%
-            match(., table_slice$vars) %>%
-            any() %>%
-            which()
+            x %>%
+              match(., table_slice$vars) %>%
+              any() %>%
+              which()
 
-        } # close function
-        ) # close rapply
+          } # close function
+          ) # close rapply
 
-      derivable_var_name <- names(derivable_var)
+        derivable_var_name <- names(derivable_var)
 
-      # get dependencies from list
+        # get dependencies from list
 
-      dependencies <- dependencies_list[[derivable_var_name]]
+        dependencies <- dependencies_list[[derivable_var_name]]
 
-      dependencies_non_fixed <-
-        dependencies %>%
-        match(., non_fixed_list) %>%
-        is.na() %>%
-        `!`() %>%
-        `[`(dependencies, .)
+        dependencies_non_fixed <-
+          dependencies %>%
+          match(., non_fixed_list) %>%
+          is.na() %>%
+          `!`() %>%
+          `[`(dependencies, .)
 
-      dependencies_fixed <-
-        dependencies %>%
-        match(., fixed_list) %>%
-        is.na() %>%
-        `!`() %>%
-        `[`(dependencies, .)
+        dependencies_fixed <-
+          dependencies %>%
+          match(., fixed_list) %>%
+          is.na() %>%
+          `!`() %>%
+          `[`(dependencies, .)
 
-      dependencies_table_vys <- VYScomb(table_slice$years,
-        table_slice$scenarios,
-        dependencies_non_fixed,
-        dependencies_fixed,
-        baseline,
-        separator)
+        dependencies_table_vys <- VYScomb(table_slice$years,
+          table_slice$scenarios,
+          dependencies_non_fixed,
+          dependencies_fixed,
+          baseline,
+          separator)
 
-    } # close function
-    ) # close alply
+      } # close function
+      ) # close alply
 
-  dependencies_table <-
-  each_dependencies %>%
-    do.call(rbind, .) %>%
-    unique()
+    dependencies_table <-
+      each_dependencies %>%
+      do.call(rbind, .) %>%
+      unique()
 
 
-  derived_not_inputed <- dplyr::anti_join(dependencies_table, vys_table)
+    derived_not_inputed <- dplyr::anti_join(dependencies_table, vys_table)
 
-  vys_table_all <- rbind(derived_not_inputed , vys_table)
+    vys_table_all <- rbind(derived_not_inputed , vys_table)
 
- } else {
+  } else {
 
-   vys_table_all <- vys_table
+    vys_table_all <- vys_table
 
- }
+  }
 
   # Identifies raster delivery method and create list with stacks for each year/scenario
 
@@ -309,7 +410,7 @@ Ecology <- function(raster_source,
         x %>%
           names() %>%
           stringr::str_sub(., -2) %>%
-          qdap::mgsub(letters, 0, .) %>%
+          mgsub_qdap(letters, 0, .) %>%
           order() %>%
           `[[`(x, .)
 
@@ -319,112 +420,38 @@ Ecology <- function(raster_source,
   }
 
   month_names <-
-  plyr::alply(names(all_rasters_list), 1, function(x, sep_in = separator){
+    plyr::alply(names(all_rasters_list), 1, function(x, sep_in = separator){
 
-    paste(x, 1:12, sep = sep_in)
+      paste(x, 1:12, sep = sep_in)
 
-  } # close function
+    } # close function
     ) # close alply
 
   renamed_raster_list <-
-  plyr::alply(1:length(all_rasters_list), 1, function(i){
+    plyr::alply(1:length(all_rasters_list), 1, function(i){
 
-    is_month <-
-      all_rasters_list[[i]] %>%
-      names() %>%
-      length() %>%
-      `==`(12)
+      is_month <-
+        all_rasters_list[[i]] %>%
+        names() %>%
+        length() %>%
+        `==`(12)
 
-    if (is_month) {
+      if (is_month) {
 
-      names(all_rasters_list[[i]]) <- month_names[[i]]
+        names(all_rasters_list[[i]]) <- month_names[[i]]
 
-      all_rasters_list[[i]]
+        all_rasters_list[[i]]
 
-    } else {
+      } else {
 
-      all_rasters_list[[i]]
+        all_rasters_list[[i]]
 
-    }
+      }
 
-  } # close function
+    } # close function
     ) # close alply
 
   names(renamed_raster_list) <- names(all_rasters_list)
-
-  # Phenology part
-
-  if (phenology == 'month') {
-
-    final_list <- renamed_raster_list
-
-    }
-
-  if (phenology == 'year') {
-
-    layer_names <- rep(NA, length(renamed_raster_list))
-
-    raster_phenology <-
-      plyr::alply(1:length(layer_names), 1, function(i) {
-
-        if (length(names(renamed_raster_list[[i]])) != 12) {
-
-          layer_names[i] <<- names(renamed_raster_list)[i]
-
-          return(renamed_raster_list[[i]]) }
-
-        layer_names[i] <<-
-        renamed_raster_list %>%
-          names() %>%
-          `[`(i) %>%
-          paste(., "year", sep = separator)
-
-        year_average <-
-        raster::mean(renamed_raster_list[[i]])
-
-        names(year_average) <- layer_names[i]
-
-        return(year_average)
-      }
-        )
-
-    names(raster_phenology) <- names(renamed_raster_list)
-    final_list <- raster_phenology
-  }
-
-  if (phenology == 'season') {
-
-    .PhenFUN <- PhenFUN
-    .Phen_args <- Phen_args
-    .StartSeason <- StartSeason
-    .StopSeason <- StopSeason
-
-    raster_phenology <- lapply(X = renamed_raster_list,
-      FUN = Phenology,
-      PhenFUN = .PhenFUN,
-      Phen_args = .Phen_args,
-      StartSeason = .StartSeason,
-      StopSeason = .StopSeason)
-
-    final_list <-
-      plyr::alply(1:length(raster_phenology), 1, function(i, sep_in = separator){
-
-        if
-        (length(names(raster_phenology[[i]])) > 1) {
-
-        names(raster_phenology[[i]]) <-
-          paste(names(raster_phenology)[i], names(raster_phenology[[i]]), sep = sep_in)
-
-        }
-
-        raster_phenology[[i]]
-
-      } # close function
-        ) # close lapply
-
-    names(final_list) <- names(raster_phenology)
-
-  }
 
   years_scenarios_list <-
     paste(vys_table_all$years,
@@ -436,10 +463,10 @@ Ecology <- function(raster_source,
   grouped_rasters <-
     lapply(years_scenarios_list, function(x){
 
-      final_list %>%
+      renamed_raster_list %>%
         names() %>%
         match(x$vys_names, .) %>%
-        `[`(final_list, .) %>%
+        `[`(renamed_raster_list, .) %>%
         unlist() %>%
         raster::stack()
 
@@ -461,6 +488,18 @@ Ecology <- function(raster_source,
 
     } # close function
     ) # close lapply
+
+  if (Phen_method != 'month') {
+
+    final_list <- lapply(final_list, Phenology,
+      PhenFUN = PhenFUN,
+      Phen_args = Phen_args,
+      StartSeason = StartSeason,
+      StopSeason = StopSeason,
+      Phen_summary = Phen_summary,
+      separator = separator,
+      Phen_method = Phen_method)
+  }
 
   return(final_list)
 
@@ -684,218 +723,298 @@ derive_rasters <- function(.absent_vars,
 
   derived_rasters <- list()
 
-      if (isTRUE(any(match(vars_for_derivation$vars, .aliases_list$lat_aliases)))) {
+  if (isTRUE(any(match(vars_for_derivation$vars, .aliases_list$lat_aliases)))) {
 
-        if (class(.cropped_raster_list[[1]]) != 'RasterStack') stop("Unable to find a raster to derive latitude") # Get better error message
+    if (class(.cropped_raster_list[[1]]) != 'RasterStack') stop("Unable to find a raster to derive latitude") # Get better error message
 
-        lat_raster  <- raster::init(.cropped_raster_list[[1]], 'y')
-        names(lat_raster) <- 'lat'
+    lat_raster  <- raster::init(.cropped_raster_list[[1]], 'y')
+    names(lat_raster) <- 'lat'
 
-        dependencies$lat <- lat_raster
-        derived_rasters$lat <- lat_raster
+    dependencies$lat <- lat_raster
+    derived_rasters$lat <- lat_raster
 
-      }
+  }
 
-      if (isTRUE(any(match(vars_for_derivation$vars, .aliases_list$lon_aliases)))) {
+  if (isTRUE(any(match(vars_for_derivation$vars, .aliases_list$lon_aliases)))) {
 
-        if (class(.cropped_raster_list[[1]]) != 'RasterStack') stop("Unable to find a raster to derive longitude") # Get better error message
+    if (class(.cropped_raster_list[[1]]) != 'RasterStack') stop("Unable to find a raster to derive longitude") # Get better error message
 
-        lon_raster <- raster::init(.cropped_raster_list[[1]], 'x')
+    lon_raster <- raster::init(.cropped_raster_list[[1]], 'x')
 
-        dependencies$lon <- lon_raster
-        derived_rasters$lon <- lon_raster
+    dependencies$lon <- lon_raster
+    derived_rasters$lon <- lon_raster
 
-      }
+  }
 
-      if (isTRUE(any(match(vars_for_derivation$vars, .aliases_list$hours_of_sunlight_aliases)))) {
+  if (isTRUE(any(match(vars_for_derivation$vars, .aliases_list$hours_of_sunlight_aliases)))) {
 
 
 
-      }
+  }
 
-      if (isTRUE(any(match(vars_for_derivation$vars, .aliases_list$slope_aliases)))) {
+  if (isTRUE(any(match(vars_for_derivation$vars, .aliases_list$slope_aliases)))) {
 
-        if (class(.cropped_raster_list$alt) != 'RasterStack') stop("Unable to find variable alt") # Get better error message
+    if (class(.cropped_raster_list$alt) != 'RasterStack') stop("Unable to find variable alt") # Get better error message
 
-        slope_raster <- raster::stack(raster::terrain(.cropped_raster_list$alt, opt = 'slope', unit = 'radians', neighbors = 8))
+    slope_raster <- raster::stack(raster::terrain(.cropped_raster_list$alt, opt = 'slope', unit = 'radians', neighbors = 8))
 
-        dependencies$slope <- slope_raster
-        derived_rasters$slope <- slope_raster
+    dependencies$slope <- slope_raster
+    derived_rasters$slope <- slope_raster
 
-      }
+  }
 
-      if (isTRUE(any(match(vars_for_derivation$vars, .aliases_list$aspect_aliases)))) {
+  if (isTRUE(any(match(vars_for_derivation$vars, .aliases_list$aspect_aliases)))) {
 
-        if (class(.cropped_raster_list$alt) != 'RasterStack') stop("Unable to find variable alt") # Get better error message
+    if (class(.cropped_raster_list$alt) != 'RasterStack') stop("Unable to find variable alt") # Get better error message
 
-        aspect_raster  <- raster::stack(raster::terrain(.cropped_raster_list$alt, opt = 'aspect', unit = 'radians', neighbors = 8))
+    aspect_raster  <- raster::stack(raster::terrain(.cropped_raster_list$alt, opt = 'aspect', unit = 'radians', neighbors = 8))
 
-        dependencies$aspect <- aspect_raster
-        derived_rasters$aspect <- aspect_raster
+    dependencies$aspect <- aspect_raster
+    derived_rasters$aspect <- aspect_raster
 
-      }
+  }
 
-      if (isTRUE(any(match(vars_for_derivation$vars, .aliases_list$solar_radiation_aliases)))) {}
+  if (isTRUE(any(match(vars_for_derivation$vars, .aliases_list$PET_aliases)))) {
 
-      if (isTRUE(any(match(vars_for_derivation$vars, .aliases_list$PET_aliases)))) {
+    # Calculating monthly PET
+    # The following code takes the function in EcoHydRology and applies
+    # it to a day at the midpoint of each month (assuming 30 day months for simplicity as there is no need for false precision)
 
-        # Calculating monthly PET
-        # The following code takes the function in EcoHydRology and applies
-        # it to a day at the midpoint of each month (assuming 30 day months for simplicity as there is no need for false precision)
+    PET_vars <-
+      vars_for_derivation %>%
+      dplyr::filter(vars == 'PET')
 
-        PET_vars <-
-          vars_for_derivation %>%
-          dplyr::filter(vars == 'PET')
+    PET_rasters <-
+      plyr::alply(PET_vars, 1, function(x, sep_in = .separator){
 
-        PET_rasters <-
-          plyr::alply(PET_vars, 1, function(x, sep_in = .separator){
+        tmax_year_scenario <-
+          paste('tmax', x$year, x$scenario, sep = sep_in) %>%
+          gsub("_NA", "", .)
 
-            tmax_year_scenario <-
-              paste('tmax', x$year, x$scenario, sep = sep_in) %>%
-              gsub("_NA", "", .)
+        tmin_year_scenario <-
+          paste('tmin', x$year, x$scenario, sep = sep_in) %>%
+          gsub("_NA", "", .)
 
-            tmin_year_scenario <-
-              paste('tmin', x$year, x$scenario, sep = sep_in) %>%
-              gsub("_NA", "", .)
+        PET_year_scenario <-
+          paste('PET', x$year, x$scenario, sep = sep_in) %>%
+          gsub("_NA", "", .)
 
-            PET_year_scenario <-
-              paste('PET', x$year, x$scenario, sep = sep_in) %>%
-              gsub("_NA", "", .)
+        # loop over months, change to lapply
+        ncores <- parallel::detectCores()
+        raster::beginCluster(ncores, type = 'SOCK')
 
-            # loop over months, change to lapply
+        PET_month_list <-
+          plyr::alply(c(1:12), 1, function(j) {
 
-            PET_month_list <-
-              plyr::alply(c(1:12), 1, function(j) {
+            lat <- raster::values(dependencies$lat) * pi/180
+            evap <- raster::raster(.cropped_raster_list[[tmax_year_scenario]], 1)
+            slope <- raster::values(dependencies$slope)
+            aspect <- raster::values(dependencies$aspect)
+            Tmax <- raster::values(raster::subset(.cropped_raster_list[[tmax_year_scenario]], j))/10
+            Tmin <- raster::values(raster::subset(.cropped_raster_list[[tmin_year_scenario]], j))/10
+            d <- data.frame(day = (30 * j) - 15, Tmin, Tmax, slope, aspect, lat) # day at the midpoint of each month
+            d[is.na(d)] <- 0
+            suppressWarnings(Es_PET <- EcoHydRology::PET_fromTemp(Jday = d$day, Tmax_C = d$Tmax, Tmin_C = d$Tmin, lat_radians = d$lat, aspect = d$aspect, slope = d$slope) * 1000) # A bug in EcoHydRology prints an annoying warning.
+            raster::values(evap) <- Es_PET
+            raster::raster(evap)
+            names(evap) <- paste("PET", j, sep = "")
 
-                lat <- raster::values(dependencies$lat) * pi/180
-                evap <- raster::raster(.cropped_raster_list[[tmax_year_scenario]], 1)
-                slope <- raster::values(dependencies$slope)
-                aspect <- raster::values(dependencies$aspect)
-                Tmax <- raster::values(raster::subset(.cropped_raster_list[[tmax_year_scenario]], j))/10
-                Tmin <- raster::values(raster::subset(.cropped_raster_list[[tmin_year_scenario]], j))/10
-                d <- data.frame(day = (30 * j) - 15, Tmin, Tmax, slope, aspect, lat) # day at the midpoint of each month
-                d[is.na(d)] <- 0
-                suppressWarnings(Es_PET <- EcoHydRology::PET_fromTemp(Jday = d$day, Tmax_C = d$Tmax, Tmin_C = d$Tmin, lat_radians = d$lat, aspect = d$aspect, slope = d$slope) * 1000) # A bug in EcoHydRology prints an annoying warning.
-                raster::values(evap) <- Es_PET
-                raster::raster(evap)
-                names(evap) <- paste("PET", j, sep = "")
-
-                return(evap)
-
-              } # close function
-              ) # close alply
-
-            PET_year_scenario_stack <- raster::stack(PET_month_list) * 100
-            names(PET_year_scenario_stack) <- paste("PET", 1:12, sep = "")
-
-            return(PET_year_scenario_stack)
+            return(evap)
 
           } # close function
-          )  # close alply
+          ) # close alply
 
-        names(PET_rasters) <- PET_vars$vys_names
+        raster::endCluster()
 
-        dependencies <- append(dependencies, PET_rasters)
-        derived_rasters <- append(derived_rasters, PET_rasters)
+        PET_year_scenario_stack <- raster::stack(PET_month_list) * 100
+        names(PET_year_scenario_stack) <- paste("PET", 1:12, sep = "")
 
-      }
+        return(PET_year_scenario_stack)
 
-      if (isTRUE(any(match(vars_for_derivation$vars, .aliases_list$AET_aliases)))) {
+      } # close function
+      )  # close alply
 
-        # Estimating AET using a simple bucket model # Duncan Golicher code:
-        # AET is Actual evapotranspiration and always lower than PET potential evapotranspiration
-        # and can be much lower when the soil profile is well below field capacity.
+    names(PET_rasters) <- PET_vars$vys_names
 
-        AET_vars <- dplyr::filter(.absent_vars, vars == "AET")
+    dependencies <- append(dependencies, PET_rasters)
+    derived_rasters <- append(derived_rasters, PET_rasters)
 
-        AET_rasters <-
-          plyr::alply(AET_vars, 1, function(x, sep_in = .separator){
+  }
 
-            PET_year_scenario <-
-              paste('PET', x$year, x$scenario, sep = sep_in) %>%
-              gsub("_NA", "", .)
+  if (isTRUE(any(match(vars_for_derivation$vars, .aliases_list$AET_aliases)))) {
 
-            prec_year_scenario <-
-              paste('prec', x$year, x$scenario, sep = sep_in) %>%
-              gsub("_NA", "", .)
+    # Estimating AET using a simple bucket model # Duncan Golicher code:
+    # AET is Actual evapotranspiration and always lower than PET potential evapotranspiration
+    # and can be much lower when the soil profile is well below field capacity.
 
-            AET_year_scenario <-
-              paste('PET', x$year, x$scenario, sep = sep_in) %>%
-              gsub("_NA", "", .)
+    AET_vars <- dplyr::filter(.absent_vars, vars == "AET")
 
-            Bucket <- raster::raster(dependencies[[PET_year_scenario]]/100, 1)
+    AET_rasters <-
+      plyr::alply(AET_vars, 1, function(x, sep_in = .separator){
 
-            for (n in 1:2) {
-              for (i in 1:359) {
-                mn <- 1 + i %/% 30                                # %/% indicates integer division
-                NewAET <- Bucket
-                NewBucket <- raster::values(Bucket)
-                rain <- raster::values(raster::subset(.cropped_raster_list[[prec_year_scenario]], mn))/30
-                alpha <- (NewBucket - 200)/300
-                evap <- raster::values(raster::subset(dependencies[[PET_year_scenario]]/100, mn)) * alpha * 0.8   #     A fudge factor for stomatal control.
-                NewBucket <- NewBucket + (rain) - evap
-                NewBucket[NewBucket > 500] <- 500
-                NewBucket[NewBucket < 200] <- 200
-                raster::values(Bucket) <- NewBucket
-                raster::values(NewAET) <- evap * (NewBucket > 200)
-                if (n > 1 && (i %% 30) - 15 == 0) {     ## i%%30 will run 1 to 359 and determine position in 30 e.g., 1 is 1 and 61 is 1
-                  if (mn == 1) {
-                    AET <- suppressMessages(raster::brick(NewAET))
-                  }
-                  if (mn > 1) {
-                    AET <- suppressMessages(raster::addLayer(AET, NewAET))
-                  }
-                }
+        PET_year_scenario <-
+          paste('PET', x$year, x$scenario, sep = sep_in) %>%
+          gsub("_NA", "", .)
+
+        prec_year_scenario <-
+          paste('prec', x$year, x$scenario, sep = sep_in) %>%
+          gsub("_NA", "", .)
+
+        AET_year_scenario <-
+          paste('PET', x$year, x$scenario, sep = sep_in) %>%
+          gsub("_NA", "", .)
+
+        Bucket <- raster::raster(dependencies[[PET_year_scenario]]/100, 1)
+
+        ncores <- parallel::detectCores()
+        raster::beginCluster(ncores, type = 'SOCK')
+        for (n in 1:2) {
+          for (i in 1:359) {
+            mn <- 1 + i %/% 30                                # %/% indicates integer division
+            NewAET <- Bucket
+            NewBucket <- raster::values(Bucket)
+            rain <- raster::values(raster::subset(.cropped_raster_list[[prec_year_scenario]], mn))/30
+            alpha <- (NewBucket - 200)/300
+            evap <- raster::values(raster::subset(dependencies[[PET_year_scenario]]/100, mn)) * alpha * 0.8   #     A fudge factor for stomatal control.
+            NewBucket <- NewBucket + (rain) - evap
+            NewBucket[NewBucket > 500] <- 500
+            NewBucket[NewBucket < 200] <- 200
+            raster::values(Bucket) <- NewBucket
+            raster::values(NewAET) <- evap * (NewBucket > 200)
+            if (n > 1 && (i %% 30) - 15 == 0) {     ## i%%30 will run 1 to 359 and determine position in 30 e.g., 1 is 1 and 61 is 1
+              if (mn == 1) {
+                AET <- suppressMessages(raster::brick(NewAET))
+              }
+              if (mn > 1) {
+                AET <- suppressMessages(raster::addLayer(AET, NewAET))
               }
             }
+          }
+        }
 
-            AET_year_scenario_stack <- suppressMessages(AET * 100)
-            names(AET_year_scenario_stack) <- paste("AET", 1:12, sep = "")
-            return(AET_year_scenario_stack)
+        raster::endCluster()
+
+        AET_year_scenario_stack <- suppressMessages(AET * 100)
+        names(AET_year_scenario_stack) <- paste("AET", 1:12, sep = "")
+        return(AET_year_scenario_stack)
+
+      } # close function
+      )  # close alply
+
+    names(AET_rasters) <- AET_vars$vys_names
+
+    dependencies <- append(dependencies, AET_rasters)
+    derived_rasters <- append(derived_rasters, AET_rasters)
+
+  }
+
+  if (isTRUE(any(match(vars_for_derivation$vars, .aliases_list$CWD_aliases)))) {
+
+    CWD_vars <- dplyr::filter(.absent_vars, vars == "CWD")
+
+    CWD_rasters <-
+      plyr::alply(CWD_vars, 1, function(x, sep_in = .separator){
+
+        PET_year_scenario <-
+          paste('PET', x$year, x$scenario, sep = sep_in) %>%
+          gsub("_NA", "", .)
+
+        AET_year_scenario <-
+          paste('AET', x$year, x$scenario, sep = sep_in) %>%
+          gsub("_NA", "", .)
+
+        CWD_year_scenario <- dependencies[[PET_year_scenario]] - dependencies[[AET_year_scenario]]
+
+        names(CWD_year_scenario) <- paste("CWD", 1:12, sep = "")
+
+        return(CWD_year_scenario)
+
+      } # close function
+      )  # close alply
+
+    names(CWD_rasters) <- CWD_vars$vys_names
+
+    dependencies <- append(dependencies, CWD_rasters)
+    derived_rasters <- append(derived_rasters, CWD_rasters)
+
+  }
+
+
+  if (isTRUE(any(match(vars_for_derivation$vars, .aliases_list$RH_aliases)))) {
+
+    RH_vars <-
+      vars_for_derivation %>%
+      dplyr::filter(vars == 'RH')
+
+    RH_rasters <-
+      plyr::alply(RH_vars, 1, function(x, sep_in = .separator){
+
+        tmax_year_scenario <-
+          paste('tmax', x$year, x$scenario, sep = sep_in) %>%
+          gsub("_NA", "", .)
+
+        if (length(.cropped_raster_list[[tmax_year_scenario]]) == 0) {
+          message(paste(tmax_year_scenario, "not found."))
+        }
+
+        vapr_year_scenario <-
+          paste('vapr', x$year, x$scenario, sep = sep_in) %>%
+          gsub("_NA", "", .)
+
+        if (length(.cropped_raster_list[[vapr_year_scenario]]) == 0) {
+          message(paste(vapr_year_scenario, "not found."))
+        }
+
+        # loop over months, change to lapply
+        ncores <- parallel::detectCores()
+        raster::beginCluster(ncores, type = 'SOCK')
+
+        RH_month_list <-
+          plyr::alply(c(1:12), 1, function(j) {
+
+
+            rh_temp <- raster::raster(.cropped_raster_list[[tmax_year_scenario]], 1)
+
+            Tmax <- raster::values(raster::subset(.cropped_raster_list[[tmax_year_scenario]], j))/10
+            Vapr_milibars <- raster::values(raster::subset(.cropped_raster_list[[vapr_year_scenario]], j)) * 10
+
+            Saturation_vapr_milibars <- 6.11*10^(7.5 * Tmax / (237.7 + Tmax))
+
+            RH_decimal <- Vapr_milibars/Saturation_vapr_milibars
+
+            RH_decimal[RH_decimal > 1] <- 1
+
+            RH_percent <- RH_decimal * 100
+
+            raster::values(rh_temp) <- RH_percent
+            names(rh_temp) <- paste0("RH", j)
+
+            return(rh_temp)
 
           } # close function
-          )  # close alply
+          ) # close alply
 
-        names(AET_rasters) <- AET_vars$vys_names
+        raster::endCluster()
 
-        dependencies <- append(dependencies, AET_rasters)
-        derived_rasters <- append(derived_rasters, AET_rasters)
+        RH_year_scenario_stack <- raster::stack(RH_month_list)
+        names(RH_year_scenario_stack) <- paste("RH", 1:12, sep = "")
 
-      }
+        return(RH_year_scenario_stack)
 
-      if (isTRUE(any(match(vars_for_derivation$vars, .aliases_list$CWD_aliases)))) {
+      } # close function
+      )  # close alply
 
-        CWD_vars <- dplyr::filter(.absent_vars, vars == "CWD")
+    names(RH_rasters) <- RH_vars$vys_names
 
-        CWD_rasters <-
-          plyr::alply(CWD_vars, 1, function(x, sep_in = .separator){
+    dependencies <- append(dependencies, RH_rasters)
+    derived_rasters <- append(derived_rasters, RH_rasters)
 
-            PET_year_scenario <-
-              paste('PET', x$year, x$scenario, sep = sep_in) %>%
-              gsub("_NA", "", .)
-
-            AET_year_scenario <-
-              paste('AET', x$year, x$scenario, sep = sep_in) %>%
-              gsub("_NA", "", .)
-
-            CWD_year_scenario <- dependencies[[PET_year_scenario]] - dependencies[[AET_year_scenario]]
-
-            names(CWD_year_scenario) <- paste("CWD", 1:12, sep = "")
-
-            return(CWD_year_scenario)
-
-          } # close function
-          )  # close alply
-
-        names(CWD_rasters) <- CWD_vars$vys_names
-
-        dependencies <- append(dependencies, CWD_rasters)
-        derived_rasters <- append(derived_rasters, CWD_rasters)
-
-      }
+  }
 
   return(derived_rasters)
 
 }
 
 utils::globalVariables(".")
+
+##### qdap ####
