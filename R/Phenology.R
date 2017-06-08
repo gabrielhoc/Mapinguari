@@ -46,7 +46,21 @@ Phenology <- function(raster_list,
   PhenFUN = NULL,
   Phen_args = NULL,
   StartSeason = 0,
-  StopSeason = 12) {
+  StopSeason = 12,
+  Phen_summary = c('mean', 'sd'),
+  separator = '_',
+  Phen_method = 'season') {
+
+  Phen_summary_list <- list(
+
+    mean = function(r) raster::calc(r, mean, na.rm = TRUE),
+    total = function(r) raster::calc(r, sum, na.rm = TRUE),
+    sd = function(r) raster::calc(r, sd, na.rm = TRUE),
+    cvar = function(r) raster::calc(r, sd, na.rm = TRUE) / raster::calc(r, mean, na.rm = TRUE)
+
+  )
+
+  Phen_summary_list_selected <- Phen_summary_list[Phen_summary]
 
     split_vars <-
       raster_list %>%
@@ -85,76 +99,49 @@ Phenology <- function(raster_list,
 
     names(fixed_list) <- fixed_names
 
-  if (!is.null(PhenFUN)) {
+    if (Phen_method == 'year') {
 
-        vars_only <-
-          separate_list[names(separate_list) == Phen_args] %>%
-          `[[`(1)
+      raster_phenology <-
+        plyr::alply(1:length(separate_list), 1, function(i) {
 
-        Phen_logical <-
-          raster::calc(x = vars_only, fun = PhenFUN) %>%
-          raster::stack()
+          if (length(names(separate_list[[i]])) != 12) return(separate_list[[i]])
 
-        Phen_logical_negative <- 1 - Phen_logical
+          layer_name <-
+            separate_list %>%
+            names() %>%
+            `[`(i) %>%
+            paste(., "year", sep = separator)
 
-        # number of months able to breed
+          ncores <- parallel::detectCores()
+          raster::beginCluster(ncores, type = 'SOCK')
 
-        number_months <-
-          Phen_logical %>%
-          raster::stack() %>%
-          sum()
+          year_summary <- lapply(Phen_summary_list_selected, function(x) {
 
-        names(number_months) <- "Season_length"
+            do.call(x, list( r = separate_list[[i]]))
 
-        number_months_negative <-
-          Phen_logical_negative %>%
-          raster::stack() %>%
-          sum()
+          }
 
-        non_fixed_output_list <-
-          lapply(non_fixed_list, function(x){
-
-        Var_logical <-
-          plyr::alply(1:12, 1, function(i) x[[i]] * Phen_logical[[i]])
-
-        Var_season <-
-          sum(raster::stack( Var_logical))/number_months
-
-        Var_logical_negative <-
-            plyr::alply(1:12, 1, function(i) x[[i]] * Phen_logical_negative[[i]])
-
-        Var_non_season <-
-          sum(raster::stack(Var_logical_negative))/number_months_negative
-
-        non_fixed_output <-
-          raster::stack(Var_season, Var_non_season)
-
-          return(non_fixed_output)
-
-      }
-      )
-
-        Season_names <- paste(names(non_fixed_output_list), "Season", sep = "_")
-        NonSeason_names <- paste(names(non_fixed_output_list), "NonSeason", sep = "_")
-
-        final_list <-
-        plyr::alply(1:length(non_fixed_output_list), 1, function(i){
-
-          names(non_fixed_output_list[[i]]) <- c(Season_names[[i]], NonSeason_names[[i]])
-          return(non_fixed_output_list[[i]])
-
-        }
           )
 
-        names(final_list) <- names(non_fixed_output_list)
+          raster::endCluster()
 
-        all_output <-
-          raster::stack(append(final_list, fixed_list))
+          year_stack <- raster::stack(year_summary)
+          names(year_stack) <- paste(layer_name, Phen_summary, sep = separator)
 
-        final_output <-
-          raster::stack(all_output, number_months)
+          return(year_stack)
+        }
+        )
 
-      } else {
+      final_stack <-
+      raster_phenology %>%
+        unlist() %>%
+        raster::stack()
+
+      return(final_stack)
+
+    }
+
+    if (Phen_method == 'season' & is.null(PhenFUN)) {
 
         if (StartSeason < 0 | StartSeason > 12 | StopSeason < 0 | StopSeason > 12) stop("Months outside range.")
 
@@ -168,7 +155,7 @@ Phenology <- function(raster_list,
 
         rolled_months <-
           c(0:11) %>%
-          `+`(start_month) %>%
+          `+`(start_month - 1) %>%
           `%%`(12) %>%
           `+`(1)
 
@@ -182,40 +169,155 @@ Phenology <- function(raster_list,
         all_list <- append(non_fixed_list, fixed_list)
 
         final_output <-
-          lapply(all_list, function(x,
+          plyr::alply(1:length(all_list), 1, function(i,
             .season_months = season_months,
             .start_month = start_month,
             .stop_month = stop_month,
             .start_fraction = start_fraction,
             .stop_fraction = stop_fraction){
 
-            if (length(names(x)) != 12) return(x)
+            if (length(names(all_list[[i]])) != 12) return(all_list[[i]])
 
-            inside_months <- raster::mean(x[[.season_months]], na.rm = TRUE)
+            inside_months <- lapply(Phen_summary_list_selected, function(y) {
 
-            outside_months <- raster::mean(x[[-.season_months]], na.rm = TRUE)
+              do.call(y, list( r = all_list[[i]][[.season_months]]))
 
-            fraction_first_month <-
-              x[[.start_month]] %>%
-              `*`(.start_fraction)
+            }
 
-            fraction_last_month <-
-              x[[.stop_month]] %>%
-              `*`(.stop_fraction)
+            )
 
-            season_average <- inside_months + fraction_first_month + fraction_last_month
-            no_season_average <- outside_months - fraction_first_month - fraction_last_month
+            inside_stack <- raster::stack(inside_months)
 
-            output <- raster::stack(season_average, no_season_average)
-            names(output) <- c("Season", "NonSeason")
+            names(inside_stack) <- paste(names(all_list)[[i]], "season", names(inside_months), sep = "_")
+
+            outside_months <-  lapply(Phen_summary_list_selected, function(y) {
+
+              do.call(y, list( r = all_list[[i]][[-.season_months]]))
+
+            }
+
+            )
+
+            outside_stack <- raster::stack(outside_months)
+
+            names(outside_stack) <- paste(names(all_list)[[i]], "nonseason", names(outside_months), sep = "_")
+
+
+#            fraction_first_month <-
+#              x[[.start_month]] %>%
+#              `*`(.start_fraction)
+
+#            fraction_last_month <-
+#              x[[.stop_month]] %>%
+#              `*`(.stop_fraction)
+
+#            season_summary <- inside_months + fraction_first_month + fraction_last_month
+#            no_season_summary <- outside_months - fraction_first_month - fraction_last_month
+
+            season_summary <- inside_stack
+            no_season_summary <- outside_stack
+
+            output <- raster::stack(season_summary, no_season_summary)
 
             return(output)
 
           }
           )
 
-        }
+        final_stack <- raster::stack(final_output)
 
-    return(final_output)
+          return(final_stack)
+
+    }
+
+    if (Phen_method == 'season' & !is.null(PhenFUN)) {
+
+      pred_raster <-
+        Phen_args %in% split_vars %>%
+        which() %>%
+        `[[`(Phen_args, .)
+
+      formals(PhenFUN)  <- Phen_args
+
+      vars_only <-
+        raster_list[[which(unlist(split_vars) == pred_raster)]]
+
+      ncores <- parallel::detectCores()
+      raster::beginCluster(ncores, type = 'SOCK')
+
+      Phen_logical <-
+        raster::calc(x = vars_only, fun = PhenFUN) %>%
+        raster::stack()
+
+
+           raster::endCluster()
+
+      Phen_logical_negative <- 1 - Phen_logical
+
+      # number of months able to breed
+
+      number_months <-
+        Phen_logical %>%
+        raster::stack() %>%
+        sum()
+
+      names(number_months) <- "Season_length"
+
+      number_months_negative <-
+        Phen_logical_negative %>%
+        raster::stack() %>%
+        sum()
+
+      non_fixed_output_list <-
+        lapply(non_fixed_list, function(x){
+
+          ncores <- parallel::detectCores()
+          raster::beginCluster(ncores, type = 'SOCK')
+
+          Var_logical <-
+            plyr::alply(1:12, 1, function(i) x[[i]] * Phen_logical[[i]])
+
+          Var_season <-
+            sum(raster::stack( Var_logical))/number_months
+
+          Var_logical_negative <-
+            plyr::alply(1:12, 1, function(i) x[[i]] * Phen_logical_negative[[i]])
+
+          Var_non_season <-
+            sum(raster::stack(Var_logical_negative))/number_months_negative
+
+          non_fixed_output <-
+            raster::stack(Var_season, Var_non_season)
+
+          raster::endCluster()
+
+          return(non_fixed_output)
+
+        }
+        )
+
+      Season_names <- paste(names(non_fixed_output_list), "Season", sep = "_")
+      NonSeason_names <- paste(names(non_fixed_output_list), "NonSeason", sep = "_")
+
+      final_list <-
+        plyr::alply(1:length(non_fixed_output_list), 1, function(i){
+
+          names(non_fixed_output_list[[i]]) <- c(Season_names[[i]], NonSeason_names[[i]])
+          return(non_fixed_output_list[[i]])
+
+        }
+        )
+
+      names(final_list) <- names(non_fixed_output_list)
+
+      all_output <-
+        raster::stack(append(final_list, fixed_list))
+
+      final_output <-
+        raster::stack(all_output, number_months)
+
+      return(final_output)
+
+    }
 
   }

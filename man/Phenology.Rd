@@ -5,7 +5,8 @@
 \title{Groups rasters by duration of phenological event.}
 \usage{
 Phenology(raster_list, PhenFUN = NULL, Phen_args = NULL, StartSeason = 0,
-  StopSeason = 12)
+  StopSeason = 12, Phen_summary = c("mean", "sd"), separator = "_",
+  Phen_method = "season")
 }
 \arguments{
 \item{raster_list}{RasterStack. Only accept stacks with 12 layers.}
