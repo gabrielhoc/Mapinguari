@@ -14,10 +14,13 @@ Encoding: UTF-8
 LazyData: true
 URL: http://github.com/gabrielhoc/Mapinguari-development
 BugReports: http://github.com/gabrielhoc/Mapinguari-development/issues
-Suggests: knitr,
-    rmarkdown
+Suggests: 
+    beepr,
+    knitr,
+    rmarkdown,
+    testthat
 VignetteBuilder: knitr
-Imports:backports,
+Imports: backports,
     dplyr,
     EcoHydRology,
     ggmap,
@@ -34,5 +37,6 @@ Imports:backports,
     rlist,
     snow,
     stringr,
-    tibble
+    tibble,
+    velox
 RoxygenNote: 6.0.1
