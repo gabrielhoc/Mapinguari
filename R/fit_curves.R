@@ -1,6 +1,6 @@
 #' Creates functions relating environment to physiology.
 #'
-#' \code{Physiology} Creates functions relating environment to physiology. You can run multiple models if you input their arguments as lists.
+#' \code{fit_curves} Creates functions relating environment to physiology. You can run multiple models if you input their arguments as lists.
 #'
 #' @param formula formula. Model formula.
 #' @param data data frame. Table containing variables in model formula.
@@ -14,14 +14,14 @@
 #' @return Returns a tibble containing model specifications, statistics and a predictor function.
 #' @examples
 #' perf_functions <-
-#'   Physiology(formula = performance ~ s(temp, bs = 'cs') + size,
+#'   fit_curves(formula = performance ~ s(temp, bs = 'cs') + size,
 #'     data = FulanusPhysiology,
 #'     type = 'GAMM',
 #'     random = list(id = ~ 1)
 #'   )
 #'
 #' perf_functions <-
-#'   Physiology(formula = performance ~ s(temp, bs = 'cs') + size,
+#'   fit_curves(formula = performance ~ s(temp, bs = 'cs') + size,
 #'     data = FulanusPhysiology,
 #'     type = 'GAMM',
 #'     random = list(id = ~ 1),
@@ -37,7 +37,7 @@
 #'     )
 #'
 #' perf_functions <-
-#'   Physiology(formula = formula_list,
+#'   fit_curves(formula = formula_list,
 #'     data = FulanusPhysiology,
 #'     type = 'GAMM',
 #'     random = list(id = ~ 1),
@@ -50,7 +50,7 @@
 #'   d = nlme::corARMA(0.1, form = ~ 1 | id))
 #'
 #' perf_functions <-
-#'   Physiology(formula = formula_list,
+#'   fit_curves(formula = formula_list,
 #'     data = FulanusPhysiology,
 #'     type = 'GAMM',
 #'     random = list(id = ~ 1),
@@ -58,7 +58,7 @@
 #'   )
 #'
 #' @export
-Physiology <- function(formula,
+fit_curves <- function(formula,
   data,
   type, # GAMM or NLME
   fixed = NULL,
