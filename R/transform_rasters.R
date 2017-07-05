@@ -40,9 +40,9 @@
 transform_rasters <- function(raster_stack,
   transformFUN,
   transformFUN_args,
-  separator,
+  separator = '_',
   time_res = 12
-  ) {
+) {
 
   # split stack by variable
 
@@ -84,14 +84,7 @@ transform_rasters <- function(raster_stack,
   names(fixed_list) <- fixed_names
 
   if (class(transformFUN) != 'list') transformFUN <- list(transformFUN)
-  if (is.null(names(transformFUN))) names(transformFUN) <- paste("variable", 1:length(transformFUN),  sep = separator)
-
-    if (class(raster_stack[[1]]) == 'RasterStack') {
-
-      raster_list <-
-        raster_stack
-
-    }
+  if (is.null(names(transformFUN))) names(transformFUN) <- paste("var", 1:length(transformFUN),  sep = separator)
 
   args_rasters <-
     transformFUN_args %>%
@@ -103,83 +96,94 @@ transform_rasters <- function(raster_stack,
     sapply(., function(x) class(x) == "numeric") %>%
     `[`(transformFUN_args, .)
 
-    Perf_list <-
-      lapply(raster_list, function(x) {
+  raster_by_arg <-
+    lapply(args_rasters, function(y) {
 
-        raster_by_arg <-
-          lapply(args_rasters, function(y) {
+      if (class(y) == 'call') {
 
-            if (class(y) == 'call') {
+        eval(y)
 
-              eval(y)
+      } else {
 
-            } else {
+        raster_stack %>%
+          names() %>%
+          grep(paste("^", y, sep = ""), .) %>%
+          `[[`(raster_stack, .)
 
-            x %>%
-              names() %>%
-              grep(paste("^", y, sep = ""), .) %>%
-              `[[`(x, .)
+      }
 
-            }
+    } # close function
+    ) # close laply
 
-          } # close function
-          ) # close laply
+  raster_by_arg_by_rep <-
+    lapply(raster_by_arg, function(x){
 
-        raster_by_arg_by_rep <-
-          lapply(raster_by_arg, function(x){
+      repeated_names <- 1:raster::nlayers(x)
 
-            repeated_names <- 1:raster::nlayers(x)
+      repeated_list <- raster::unstack(x)
 
-            repeated_list <- raster::unstack(x)
+      names(repeated_list) <- repeated_names
 
-            names(repeated_list) <- repeated_names
+      repeated_list
 
-            repeated_list
+    } # close function
+    ) # close lapply
 
-          } # close function
-          ) # close lapply
+  reversed_list <-
+    raster_by_arg_by_rep %>%
+    purrr::transpose()
 
-        reversed_list <-
-          raster_by_arg_by_rep %>%
-          purrr::transpose()
+  transformed_rasters <- lapply(reversed_list, function(x){
 
-        Perf_rasters <- lapply(reversed_list, function(x){
+    var_stack <- raster::stack(x)
 
-          call_list <-
-            x %>%
-            append(args_constant)
+    prediction <-
+      lapply(transformFUN, function(y) {
 
-          prediction <-
-            lapply(transformFUN, function(y) {
+        new_default <-
+        names(args_constant) %in% formalArgs(y) %>%
+          `[`(args_constant, .)
 
-              do.call(y, args = call_list)
+        formals(y)[names(new_default)] <- new_default
 
-            }
-            )
+        raster::calc(var_stack, fun = y)
 
-          prediction_named <-
-            plyr::alply(1:length(prediction), 1, function(i){
+      }
+      )
 
-              names(prediction[[i]]) <- names(prediction)
-              prediction[[i]]
+    prediction_named <-
+      plyr::alply(1:length(prediction), 1, function(i){
 
-            }
-            )
+        names(prediction[[i]]) <- names(prediction)
+        prediction[[i]]
 
-          names(prediction_named) <- names(prediction)
-          prediction_named
+      }
+      )
 
-        } # close function
-        ) # close lapply
+    names(prediction_named) <- names(prediction)
+    prediction_named
 
-        names(Perf_rasters) <- paste("Perf", names(Perf_rasters), sep = separator)
+  } # close function
+  ) # close lapply
 
-        raster::stack(Perf_rasters)
+  unreversed_list <-
+    transformed_rasters %>%
+    purrr::transpose()
 
-      } # close function
-      ) # close lapply
+  transformed_stack <-
+    lapply(unreversed_list, function(x){
 
-    return(Perf_list)
+      single_var_stack <-
+        raster::stack(x)
+
+      names(single_var_stack) <- paste(unlist(lapply(x, names)), names(x), sep = separator)
+
+      single_var_stack
+
+    }
+    )
+
+  return(transformed_stack)
 }
 
 lagged <- function(var, lag, stack) {
