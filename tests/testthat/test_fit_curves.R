@@ -1,18 +1,20 @@
-test_that("fit_curves works for different types of algorthim (GAMM, NLME, FlexParammCurve)", {
+test_that("fit_curves works for different combination of inputs", {
 
    perf_functions <-
-     fit_curves(formula = performance ~ s(temp, bs = 'cs') + size,
+     fit_curves(formula = list(tpc_size = performance ~ s(temp, bs = 'cs') + size,
+                               tpc_no_size = performance ~ s(temp, bs = 'cs')),
        data = FulanusPhysiology,
-       type = 'GAMM',
-       random = list(id = ~ 1)
+       fitFUN = mgcv::gamm,
+       args_list = list(random = list(id = ~ 1))
      )
 
-   perf_functions <-
-     fit_curves(formula = performance ~ s(temp, bs = 'cs') + size,
+   perf_functions2 <-
+     fit_curves(formula = list(tpc_size = performance ~ s(temp, bs = 'cs') + size,
+                               tpc_no_size = performance ~ s(temp, bs = 'cs')),
        data = FulanusPhysiology,
-       type = 'GAMM',
-       random = list(id = ~ 1),
-       correlation = list(nlme::corAR1(form = ~ 1 | id))
+       fitFUN = gamm,
+       args_list = list(random = list(id = ~ 1),
+                        correlation = nlme::corAR1(form = ~ 1 | id))
      )
 
    formula_list <-
@@ -26,22 +28,22 @@ test_that("fit_curves works for different types of algorthim (GAMM, NLME, FlexPa
    perf_functions <-
      fit_curves(formula = formula_list,
        data = FulanusPhysiology,
-       type = 'GAMM',
-       random = list(id = ~ 1),
-       correlation = list(nlme::corAR1(form = ~ 1 | id)
-     ))
+       fitFUN = gamm,
+       args_list = list(random = list(id = ~ 1))
+     )
 
-   correlation_list <- list(a = nlme::corAR1(form = ~ 1 | id),
-     b = nlme::corAR1(0.1, form = ~ 1 | id),
-     c = nlme::corARMA(form = ~ 1 | id),
-     d = nlme::corARMA(0.1, form = ~ 1 | id))
+   # allow multiple arguments
+
+   correlation_list <- list(correlation = nlme::corAR1(form = ~ 1 | id),
+                            correlation = nlme::corAR1(0.1, form = ~ 1 | id),
+                            correlation = nlme::corARMA(form = ~ 1 | id),
+                            correlation = nlme::corARMA(0.1, form = ~ 1 | id))
 
    perf_functions <-
      fit_curves(formula = formula_list,
        data = FulanusPhysiology,
-       type = 'GAMM',
-       random = list(id = ~ 1),
-       correlation = correlation_list
+       fitFUN = gamm,
+       args_list = correlation_list
      )
 
   expect_is(perf_functions, "data.frame")

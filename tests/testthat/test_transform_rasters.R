@@ -10,7 +10,8 @@ test_that("transform_rasters works", {
       alert = 6)
 
    perf_functions <-
-   fit_curves(formula = performance ~ s(temp, bs = 'cs') + size,
+   fit_curves(formula = list(tpc_size = performance ~ s(temp, bs = 'cs') + size,
+                             tpc_no_size = performance ~ s(temp, bs = 'cs')),
     data = FulanusPhysiology,
     type = 'GAMM',
     random = list(id = ~ 1),
@@ -18,15 +19,28 @@ test_that("transform_rasters works", {
    )
 
    Perf_rasters <-
-   transform_rasters(raster_source = Fulanus_Ecorasters_download[[1]],
-    Perf_args = list(temp = 'tmax', size = 10),
-    separator = '_',
-    PerfFUN = perf_functions$predict$model_1)
+   transform_rasters(raster_stack = Fulanus_Ecorasters_download[[1]],
+     transformFUN = list(perf = perf_functions$predict$model_1),
+     transformFUN_args = list(temp = 'tmax', size = 10)
+    )
 
-   Perf_rasters <- lapply(Fulanus_Ecorasters_download, transform_rasters,
-     transformFUN = perf_functions$predict$model_1,
-     transformFUN_args = list(temp = 'tmax', size = 10),
-     separator = '_')
+   Perf_rasters_list <- lapply(Fulanus_Ecorasters_download, transform_rasters,
+     transformFUN = list(perf = perf_functions$predict$model_1),
+     transformFUN_args = list(temp = 'tmax', size = 10)
+     )
+
+   Perf_rasters_compare_models <- lapply(Fulanus_Ecorasters_download, transform_rasters,
+     transformFUN = list(perf_model1 = perf_functions$predict$model_1,
+                         perf_model2 = perf_functions$predict$model_2),
+     transformFUN_args = list(temp = 'tmax', size = 10)
+   )
+
+   Perf_rasters_age <-
+     transform_rasters(raster_stack = Fulanus_Ecorasters_download[[1]],
+       transformFUN = list(perf = perf_functions$predict$model_1),
+       transformFUN_args = list(young = list(temp = 'tmax', size = 5),
+                                adult = list(temp = 'tmax', size = 5))
+     )
 
   expect_is(Ecology_download, "list")
   expect_is(Ecology_dir, "list")

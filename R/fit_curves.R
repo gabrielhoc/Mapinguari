@@ -60,144 +60,74 @@
 #' @export
 fit_curves <- function(formula,
   data,
-  type, # GAMM or NLME
-  fixed = NULL,
-  random = NULL,
-  start = NULL,
-  correlation = NULL,
-  ...
-) {
-
-  ellipsis_args <- list(...)
-
-  gamm_ellipsis <-
-    mgcv::gamm %>%
-    formals() %>%
-    names() %>%
-    match(., names(ellipsis_args), nomatch = FALSE) %>%
-    `[`(ellipsis_args, .)
-
-  nlme_ellipsis <-
-    nlme::nlme %>%
-    formals() %>%
-    names() %>%
-    match(., names(ellipsis_args), nomatch = FALSE) %>%
-    `[`(ellipsis_args, .)
-
-  # if argument is not in a list, put it in a list
+  fitFUN,
+  args_list,
+  separator = '_',
+  formula_arg = 'formula'
+  ) {
 
   if (class(formula) != 'list') formula <- list(formula)
-  if (class(type) != 'list') type <- list(type)
 
-  # list arguments
+  if (is.null(names(formula))) names(formula) <- paste("model", 1:length(formula), sep = separator)
 
-  table_args <- list(formula = formula,
-    type = unlist(type),
-    fixed = fixed,
-    random = random,
-    start = start,
-    correlation = correlation)
+  if (!identical(names(formula_arg), names(formula))) formula_arg <- lapply(formula, function(x) formula_arg )
 
-  # Create key for table
+  if (!identical(names(fitFUN), names(formula))) fitFUN <- lapply(formula, function(x) fitFUN )
 
-  models_key <- paste("model", seq_len(length(formula)), sep = "_")
+  if (!identical(names(args_list), names(formula))) args_list <- lapply(formula, function(x) args_list )
 
-  # remove NULLs and create table
+  fitFUN_args <-
+    lapply(names(formula), function(x){
 
-  model_table <-
-    table_args %>%
-    rlist::list.clean(fun = is.null, recursive = FALSE) %>%
-    tibble::as_tibble()
+      args_minus_formula <-
+      fitFUN[[x]] %>%
+        formalArgs() %>%
+        match(., names(args_list[[x]]), nomatch = FALSE) %>%
+        `[`(args_list[[x]], .) %>%
+        append(list(data = data))
 
-  ######################################### run models ###################################
+      formula_list <- list(formula[[x]])
 
-  gamm_or_nlme <- function(table){
+      names(formula_list) <- formula_arg[[x]]
 
-    plyr::alply(1:nrow(table), 1, function(i){
+      append(args_minus_formula, formula_list)
+    }
+    )
 
-      table_slice <- table[i, ]
+  names(fitFUN_args) <- names(formula)
 
-      switch(table_slice$type,
+  fit_result <-
+  lapply(names(formula), function(x){
 
-        GAMM = {
+    do.call(fitFUN[[x]], args = fitFUN_args[[x]])
 
-          gamm_args <-
-            table_slice %>%
-            unlist(recursive = FALSE) %>%
-            c(gamm_ellipsis)
+  }
+    )
 
-          gamm_args$data <- as.list(data)
-
-          do.call(mgcv::gamm, args = gamm_args)
-
-        }, # close GAMM
-
-        NLME = {
-
-          nlme_args <-
-            table_slice %>%
-            unlist(recursive = FALSE) %>%
-            c(nlme_ellipsis)
-
-          nlme_args$data <- as.list(data)
-
-          do.call(nlme::nlme, args = nlme_args)
-
-        } # close NLME
-
-      ) # close switch
-    } # close alply function
-    ) # close alply
-  } # close function
-
-  model_output <-
-    model_table %>%
-    gamm_or_nlme()
-
-  names(model_output) <- models_key
-
-  model_table_output <-
-    dplyr::mutate(model_table, output = model_output)
-
-  # model evaluation
+  names(fit_result) <- names(formula)
 
   model_stats <-
-  plyr::alply(1:nrow(model_table_output), 1, function(i){
+  lapply(fit_result, function(x) {
 
-  table_slice <- model_table_output[i,]
+    if (any(class(x) == 'gamm')) x <- x$lme
 
-  switch(table_slice$type,
-    GAMM = {
+    list(
+      AIC = stats::AIC(x),
+      BIC = stats::BIC(x),
+      logLik = stats::logLik(x)
+    ) # close list
 
-      list(
-        AIC = stats::AIC(table_slice$output[[1]]$lme),
-        BIC = stats::BIC(table_slice$output[[1]]$lme),
-        logLik = stats::logLik(table_slice$output[[1]]$lme)
-      ) # close list
-
-    }, # close GAMM
-    NLME = {
-
-      # insert nlme
-
-    } # close NLME
-    ) # close switch
-  } # close function
-  )# close alply
-
-  names(model_stats) <- models_key
-
-  model_table_output_stats <-
-    dplyr::mutate(model_table_output, stats = model_stats)
+  }
+  )
 
   # predict functions
 
-  predict_list <- lapply(model_table_output_stats$output, function(x){
+  predict_list <- lapply(fit_result, function(x){
 
-    formula_gam <- x$gam
+    if (any(class(x) == 'gamm')) x <- x$gam
 
     args_names <-
-      formula_gam$formula %>%
+      x$formula %>%
       all.vars() %>%
       `[`(-1)
 
@@ -207,52 +137,11 @@ fit_curves <- function(formula,
 
     TPC_function <- function() {
 
-      pred_data <-
         match.call() %>%
-        as.list() %>%
-        `[`(-1)
-
-      is_raster <-
-        sapply(pred_data, function(x) {
-        x %>%
-        class() %>%
-            grepl('^Raster', .)
-        }
-        ) %>%
-        any()
-
-      if (is_raster) {
-
-        args_stack <-
-          pred_data %>%
-          sapply(., function(x) {
-
-            x %>%
-              class() %>%
-              grepl('^Raster', .)
-
-          }
-            ) %>%
-          `[`(pred_data, .) %>%
-          raster::stack()
-
-        args_constant <-
-          pred_data %>%
-          sapply(., function(x) class(x) == "numeric") %>%
-          `[`(pred_data, .)
-
-        P <-
-        raster::predict(model = formula_gam, object = args_stack, const = args_constant)
-
-      } else {
-
-      P <-
-        predict(formula_gam, pred_data) %>%
+        as.list %>%
+        `[`(-1) %>%
+        predict(x, .) %>%
         as.vector()
-
-      }
-
-      return(P)
 
     } # close TPC function
 
@@ -260,19 +149,41 @@ fit_curves <- function(formula,
 
     TPC_function
 
+    #list(predictFUN = TPC_function)
+
   } # close factory
   ) # close lapply
 
-  model_table_output_stats_predict <-
-    dplyr::mutate(model_table_output_stats, predict = predict_list)
+  args <- args_list
+  output <- fit_result
+  predict <- predict_list
 
-  model_table_final <-
-    model_table_output_stats_predict %>%
-    dplyr::mutate(model = models_key) %>%
-    dplyr::select(model, dplyr::everything())
+  AIC <- unlist(lapply(model_stats, function(x) x$AIC))
+  BIC <- unlist(lapply(model_stats, function(x) x$BIC))
+  logLik <- unlist(lapply(model_stats, function(x) x$logLik))
 
-  names(model_table_final$formula) <- models_key
+  dAIC <- AIC - min(AIC)
+  dBIC <- BIC - min(BIC)
 
-  return(model_table_final)
+  rankAIC <- rank(dAIC)
+  rankBIC <- rank(dBIC)
+
+  output_stats <-
+    data.frame(logLik = logLik, AIC = AIC, BIC = BIC, dAIC, dBIC, rankAIC, rankBIC)
+
+  output_list <- lapply(names(formula), function(x){
+
+    list(formula = formula[[x]], args = args[[x]], output = output[[x]], predict = predict[[x]])
+
+  }
+    )
+
+  names(output_list) <- names(formula)
+
+  final_output <- append(output_list, list(stats = output_stats))
+
+  print(output_stats)
+
+  return(final_output)
 
 }
