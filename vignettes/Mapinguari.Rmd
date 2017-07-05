@@ -51,7 +51,7 @@ How does the climate looks like in this area? We can use function `get_rasters` 
 ```{r, message = FALSE, warning = FALSE, fig.height = 6, fig.width = 6, eval=FALSE}
 FulanusEcoRasters_present <-
    get_rasters(
-     raster_source = "/Users/gabriel/Documents/Mapinguari-development/global_grids_10_minutes",
+     raster_source = "/Users/gabriel/Documents/Mapinguari/global_grids_10_minutes",
      ext = FulanusDistribution,
      margin = 5,
      non_fixed_var = c('prec', 'tmin', 'tmax'),
@@ -66,12 +66,13 @@ raster::plot(FulanusEcoRasters_present[[1]])
 
 However, in order for Mapinguari to recognize which variables correspond to each year or scenario, you have to name your folders and list elements following the convention *variable_year_scenario*. The defaul character for separating those terms is "_", but you can change that, as long as you do the corresponding change to the argument `separator` in function. Some of your rasters will not be subject to scenarios, since they are measures of current climate, instead of projections. In that case you only have to name them *variable_year*, omitting the scenario term. The argument `baseline` identifies which years are not subject to scenarios, and the default is `present` and `baseline`, but it can be changed at your convenience. Some other variables are constant accross time, such as altitude. In that case you only have to write the name of the variable. Here is an example of how my folder is structured:
 
-image: ![](/Users/gabriel/Documents/Mapinguari-development/vignettes/folder_organization.png)
-
+```{r, eval=FALSE}
+image: ![](/Users/gabriel/Documents/Mapinguari/vignettes/folder_organization.png)
+```
 I'm going to assign the path to that directory to an object:
 
 ```{r, eval=FALSE}
-my_directory <- "/Users/gabriel/Documents/Mapinguari-development/global_grids_10_minutes"
+my_directory <- "/Users/gabriel/Documents/Mapinguari/global_grids_10_minutes"
 ```
 
 Why did I place some variables in the `non-fixed` argument and others in the `fixed` argument? Well, that will become relevant once we start making future projections. Variables on `non_fixed` are things such as climate, which you expect to change in different times and future scenarios, while variables in `fixed` are things such as geological features, which you expect to remain constant accross the time projected.
