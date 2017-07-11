@@ -2,13 +2,13 @@
 #'
 #' \code{summarize_rasters} Summarize rasters by duration of phenological event.
 #'
-#' @param raster_stack RasterStack. Only accept stacks with 12 layers.
+#' @param raster_stack RasterStack.
 #' @param seasons numerical vector or function. Months at the beggining and end of phenological events, or function relating phenological event to environmental conditions. If NULL, no summarizing is made (remains by month).
-#' @param season_args named list. Correspondence between PhenFUN arguments and raster names.
+#' @param season_args named list. Correspondence between 'seasons' arguments and raster names.
 #' @param summaryFUN function. Function used to summarize months inside seasons.
 #' @param summary_args named list. Additional arguments for summarizing function.
-#' @param separator
-#' @param time_res
+#' @param separator character. Character that separates variable names, years and scenarios.
+#' @param time_res integer. How many layers do time varying variables have? Default is 12, as in 12 months in a year, the time resolution in WorldClim.
 #'
 #' @return Returns a list of raster stacks for the variables required, organized by year/scenario combination.
 #'
@@ -39,10 +39,10 @@
 #'
 #' Phenology_by_precFUN <-
 #'   lapply(Fulanus_Ecorasters_download, summarize_rasters,
-#'     seasons = list(rainy = PhenFUN),
+#'     seasons = list(rainy_season = PhenFUN),
 #'     seasons_args = list(x = 'prec'),
-#'     summaryFUN = "weigthed.mean",
-#'     summary_args = list(w = "season_length")
+#'     summaryFUN = "raster::weighted.mean",
+#'     summary_args = list(w = "rainy_season")
 #'   )
 #'
 #' @export
@@ -106,13 +106,13 @@ summarize_rasters <- function(raster_stack,
         which() %>%
         `[[`(seasons_args, .)
 
-      formals(PhenFUN)  <- seasons_args
+      formals(seasons)  <- seasons_args
 
       vars_only <-
         raster_stack[[which(unlist(split_vars) == pred_raster)]]
 
       Phen_rasters <-
-        raster::overlay(x = vars_only, fun = PhenFUN) %>%
+        raster::overlay(x = vars_only, fun = seasons) %>%
         raster::stack()
 
       names(Phen_rasters) <- paste("phen", 1:time_res, sep = separator)

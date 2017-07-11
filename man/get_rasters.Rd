@@ -43,7 +43,17 @@ get_rasters(raster_source = NULL, ext = c(-180, 180, -60, 90), margin = 0,
 
 \item{seasons_args}{named list of strings. Correspondence between PhenFUN arguments and raster names.}
 
+\item{summary_args}{named list. Additional arguments for summarizing function.}
+
+\item{summaryFUN}{function. Function used to summarize months inside seasons.}
+
+\item{download_source}{character. Where to download rasters from. Default is 'pkg-raster' which will get rasters from WorldClim, using package 'raster' functions.}
+
 \item{alert}{integer. Plays a sound alert when function is done running. See documentation of package beepr for description of sound options.}
+
+\item{reorder}{logical. If TRUE, reorders layers by last two characters in their names, after replacing letters for 0.}
+
+\item{alert}{integer. If an integer is input, the functino will play a sound after it is finished. See package 'beepr' for correspondence between numbers and sounds.}
 }
 \value{
 Returns a list of raster stacks for the variables required, organized by year/scenario combination.
@@ -53,72 +63,37 @@ Returns a list of raster stacks for the variables required, organized by year/sc
 }
 \examples{
 
-Ecology_download <-
+Fulanus_Ecorasters_download <-
   get_rasters(
     ext = FulanusDistribution,
     margin = 5,
     non_fixed_var = c('prec', 'tmin', 'tmax'),
     years = c("present", '2050', '2070'),
     scenarios = c('rcp26', 'rcp45', 'rcp85'),
-    reorder = TRUE,
     alert = 6)
 
-Ecology_dir <-
+Fulanus_Ecorasters_dir <-
   get_rasters(
-    raster_source = "/Users/gabriel/Documents/Mapinguari-development/global_grids_10_minutes",
+    raster_source = "/Users/gabriel/Documents/Mapinguari/global_grids_10_minutes",
     ext = FulanusDistribution,
     margin = 5,
     non_fixed_var = c('prec', 'tmin', 'tmax'),
+    fixed_var = "alt",
     years = c("present", '2050', '2070'),
     scenarios = c('rcp26', 'rcp45', 'rcp85'),
     reorder = TRUE,
     alert = 4)
 
-Ecology_list <-
-  get_rasters(
-    raster_source = Ecology_download,
-    ext = FulanusDistribution,
-    margin = 5,
-    non_fixed_var = c('prec', 'tmin', 'tmax'),
-    years = c("present", '2050', '2070'),
-    scenarios = c('rcp26', 'rcp45', 'rcp85'),
-    reorder = TRUE,
-    alert = 1)
 
-FulanusEcoRasters_month <-
-  get_rasters(
-    raster_source = "/Users/gabriel/Documents/Mapinguari-development/global_grids_10_minutes",
+Fulanus_EcoRasters_Phenology_mean_sd <-
+  get_rasters(raster_source = Fulanus_Ecorasters_dir,
     ext = FulanusDistribution,
     margin = 5,
     non_fixed_var = c('prec', 'tmin', 'tmax'),
-    fixed_var = 'alt',
     years = c("present", '2050', '2070'),
     scenarios = c('rcp26', 'rcp45', 'rcp85'),
-    reorder = TRUE)
+    seasons = list(breeding = c(3:8), non_breeding = c(9:12, 1, 2)),
+    summaryFUN = list(tmax = c("mean", "sd"), tmin = c("mean", "sd"), prec = "sum"))
 
-FulanusEcoRasters_season <-
-  get_rasters(raster_source = "/Users/gabriel/Documents/Mapinguari-development/global_grids_10_minutes/",
-    ext = FulanusDistribution,
-    margin = 5,
-    non_fixed_var = c('prec', 'tmin', 'tmax'),
-    fixed_var = 'alt',
-    years = c("present", '2050', '2070'),
-    scenarios = c('rcp26', 'rcp45', 'rcp85'),
-    seasons = c(3, 8),
-    derive = TRUE,
-    reorder = TRUE)
-
-    # create example
-    FulanusEcoRasters_season <-
-  get_rasters(raster_source = "/Users/gabriel/Documents/Mapinguari-development/global_grids_10_minutes/",
-    ext = FulanusDistribution,
-    margin = 5,
-    non_fixed_var = c('prec', 'tmin', 'tmax'),
-    fixed_var = 'alt',
-    years = c("present", '2050', '2070'),
-    scenarios = c('rcp26', 'rcp45', 'rcp85'),
-    seasons = c(3, 8),
-    derive = TRUE,
-    reorder = TRUE)
 
 }

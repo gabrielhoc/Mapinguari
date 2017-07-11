@@ -1,13 +1,12 @@
-#' Prices of 50,000 round cut diamonds.
+#' 615 occurrence records
 #'
-#' A dataset containing the prices and other attributes of almost 54,000
-#' diamonds.
+#' A dataset containing simulated distribution records
 #'
-#' @format A data frame with 53940 rows and 10 variables:
+#' @format A data frame with 615 rows and 3 variables:
 #' \describe{
-#'   \item{price}{price, in US dollars}
-#'   \item{carat}{weight of the diamond, in carats}
+#'   \item{species}{species name}
+#'   \item{Lon}{Longitude of occurrence point}
+#'   \item{Lat}{Latitude of occurrence point}
 #'   ...
 #' }
-#' @source \url{http://www.diamondse.info/}
 "FulanusDistribution"

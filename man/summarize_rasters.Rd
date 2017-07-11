@@ -9,7 +9,7 @@ summarize_rasters(raster_stack, seasons = list(year = c(1:12)),
   separator = "_", time_res = 12)
 }
 \arguments{
-\item{raster_stack}{RasterStack. Only accept stacks with 12 layers.}
+\item{raster_stack}{RasterStack.}
 
 \item{seasons}{numerical vector or function. Months at the beggining and end of phenological events, or function relating phenological event to environmental conditions. If NULL, no summarizing is made (remains by month).}
 
@@ -17,7 +17,11 @@ summarize_rasters(raster_stack, seasons = list(year = c(1:12)),
 
 \item{summary_args}{named list. Additional arguments for summarizing function.}
 
-\item{season_args}{named list. Correspondence between PhenFUN arguments and raster names.}
+\item{separator}{character. Character that separates variable names, years and scenarios.}
+
+\item{time_res}{integer. How many layers do time varying variables have? Default is 12, as in 12 months in a year, the time resolution in WorldClim.}
+
+\item{season_args}{named list. Correspondence between 'seasons' arguments and raster names.}
 }
 \value{
 Returns a list of raster stacks for the variables required, organized by year/scenario combination.
@@ -27,24 +31,22 @@ Returns a list of raster stacks for the variables required, organized by year/sc
 }
 \examples{
 
-Ecology_dir <-
+Fulanus_Ecorasters_download <-
   get_rasters(
-    raster_source = "/Users/gabriel/Documents/Mapinguari-development/global_grids_10_minutes",
     ext = FulanusDistribution,
     margin = 5,
     non_fixed_var = c('prec', 'tmin', 'tmax'),
     years = c("present", '2050', '2070'),
     scenarios = c('rcp26', 'rcp45', 'rcp85'),
-    reorder = TRUE,
-    alert = 4)
+    alert = 6)
 
 Phenology_mean_sd <-
-  lapply(Ecology_dir, summarize_rasters,
+  lapply(Fulanus_Ecorasters_download, summarize_rasters,
     seasons = list(breeding = c(3:8), non_breeding = c(9:12, 1, 2)),
     summaryFUN = list(tmax = c("mean", "sd"), tmin = c("mean", "sd"), prec = "sum"))
 
 Phenology_weighted_mean <-
-  lapply(Ecology_dir, summarize_rasters,
+  lapply(Fulanus_Ecorasters_download, summarize_rasters,
     seasons = list(breeding = c(3:8), non_breeding = c(9:12, 1, 2)),
     summaryFUN = "weighted.mean",
     summary_args = list(w = c(0.5, rep(1, 4), 0.5))
@@ -52,39 +54,12 @@ Phenology_weighted_mean <-
 
 PhenFUN <- function(x) 1/(1 + exp((150 - x)/2))
 
-Phenology_weighted_mean <-
-  lapply(Ecology_dir, summarize_rasters,
-    seasons = list(rainy = PhenFUN),
-    seasonsFUN_args = list(x = 'prec'),
-    summaryFUN = "weigthed.mean",
-   summary_args = list(w = "season_length")
+Phenology_by_precFUN <-
+  lapply(Fulanus_Ecorasters_download, summarize_rasters,
+    seasons = list(rainy_season = PhenFUN),
+    seasons_args = list(x = 'prec'),
+    summaryFUN = "raster::weighted.mean",
+    summary_args = list(w = "rainy_season")
   )
-
-FulanusRasters <-
-  get_rasters(
-    raster_source = "/Users/gabriel/Documents/Mapinguari-development/global_grids_10_minutes",
-    ext = FulanusDistribution,
-    non_fixed_var = c('prec', 'tmin', 'tmax'),
-    fixed_var = 'alt',
-    years = c("present", '2050', '2070'),
-    scenarios = c('rcp26', 'rcp45', 'rcp85'),
-    reorder = TRUE,
-    separator = '_')
-
-# If you have a list of stacks, use each element or \\code{lapply}
-
-    summarize_rasters(FulanusEcoRasters[[1]],
-    seasons = list(breeding = 4:11))
-
-  Seasons_by_performance <-
-   lapply(FulanusEcoRasters,
-   summarize_rasters,
-   seasons = c(4, 11))
-
-   PhenFUN <- function(x) 1/(1 + exp((150 - x)/2))
-
-    summarize_rasters(FulanusEcoRasters[[1]],
-    PhenFUN,
-    Phen_args = list(x = 'prec'))
 
 }

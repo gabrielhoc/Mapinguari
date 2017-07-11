@@ -28,7 +28,7 @@ test_that("fit_curves works for different combination of inputs", {
    perf_functions <-
      fit_curves(formula = formula_list,
        data = FulanusPhysiology,
-       fitFUN = gamm,
+       fitFUN = mgcv::gamm,
        args_list = list(random = list(id = ~ 1))
      )
 
@@ -42,7 +42,7 @@ test_that("fit_curves works for different combination of inputs", {
    perf_functions <-
      fit_curves(formula = formula_list,
        data = FulanusPhysiology,
-       fitFUN = gamm,
+       fitFUN = mgcv::gamm,
        args_list = correlation_list
      )
 

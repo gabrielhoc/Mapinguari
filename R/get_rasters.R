@@ -20,12 +20,17 @@
 #' @param seasons numerical vector or function. Months at the beggining and end of phenological events, or function relating phenological event to environmental conditions. If NULL, no summarizing is made (remains by month).
 #' @param seasons_args named list of strings. Correspondence between PhenFUN arguments and raster names.
 #' @param alert integer. Plays a sound alert when function is done running. See documentation of package beepr for description of sound options.
+#' @param reorder logical. If TRUE, reorders layers by last two characters in their names, after replacing letters for 0.
+#' @param summary_args named list. Additional arguments for summarizing function.
+#' @param summaryFUN function. Function used to summarize months inside seasons.
+#' @param download_source character. Where to download rasters from. Default is 'pkg-raster' which will get rasters from WorldClim, using package 'raster' functions.
+#' @param alert integer. If an integer is input, the functino will play a sound after it is finished. See package 'beepr' for correspondence between numbers and sounds.
 #'
 #' @return Returns a list of raster stacks for the variables required, organized by year/scenario combination.
 #'
 #' @examples
 #'
-#' Ecology_download <-
+#' Fulanus_Ecorasters_download <-
 #'   get_rasters(
 #'     ext = FulanusDistribution,
 #'     margin = 5,
@@ -34,9 +39,9 @@
 #'     scenarios = c('rcp26', 'rcp45', 'rcp85'),
 #'     alert = 6)
 #'
-#' Ecology_dir <-
+#' Fulanus_Ecorasters_dir <-
 #'   get_rasters(
-#'     raster_source = "/Users/gabriel/Documents/Mapinguari-development/global_grids_10_minutes",
+#'     raster_source = "/Users/gabriel/Documents/Mapinguari/global_grids_10_minutes",
 #'     ext = FulanusDistribution,
 #'     margin = 5,
 #'     non_fixed_var = c('prec', 'tmin', 'tmax'),
@@ -46,16 +51,17 @@
 #'     reorder = TRUE,
 #'     alert = 4)
 #'
-#' Ecology_list <-
-#'   get_rasters(
-#'     raster_source = Ecology_dir,
-#'     ext = c(40, 20, 1, 4),
+#'
+#' Fulanus_EcoRasters_Phenology_mean_sd <-
+#'   get_rasters(raster_source = Fulanus_Ecorasters_dir,
+#'     ext = FulanusDistribution,
 #'     margin = 5,
-#'     non_fixed_var = c('prec'),
-#'     fixed_var = "alt",
-#'     years = c("present", '2050'),
-#'     scenarios = c('rcp26', 'rcp85'),
-#'     alert = 1)
+#'     non_fixed_var = c('prec', 'tmin', 'tmax'),
+#'     years = c("present", '2050', '2070'),
+#'     scenarios = c('rcp26', 'rcp45', 'rcp85'),
+#'     seasons = list(breeding = c(3:8), non_breeding = c(9:12, 1, 2)),
+#'     summaryFUN = list(tmax = c("mean", "sd"), tmin = c("mean", "sd"), prec = "sum"))
+#'
 #'
 #' @export
 

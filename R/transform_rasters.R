@@ -1,39 +1,60 @@
 #' Transform environmental rasters in ecophysiological rasters.
 #'
-#' \code{transform_rasters} Transform environmental rasters in ecophysiological rasters.
+#' \code{transform_rasters} Get model predictions for a ras
 #'
 #' @param raster_stack character or list of RasterStack. You can either input a path to a folder with the required rasters or a list of RasterStack organized by year/scenario.
+#' @param transformFUN function. Function used to modify rasters.
 #' @param transformFUN_args named list of strings. Correspondence between transformFUN arguments and raster names.
 #' @param separator character. Character that separates variable names, years and scenarios.
-#' @param transformFUN function. Function used to modify rasters.
+#' @param time_res How many layers do time varying variables have? Default is 12, as in 12 months in a year, the time resolution in WorldClim.
 #'
 #' @return Returns a list of raster stacks for the variables required, organized by year/scenario combination.
 #'
 #' @examples
-#' FulanusEcoRasters <-
+#'
+#' Fulanus_Ecorasters_download <-
 #'   get_rasters(
-#'     raster_stack = "/Users/gabriel/Documents/Mapinguari-development/global_grids_10_minutes",
 #'     ext = FulanusDistribution,
+#'     margin = 5,
 #'     non_fixed_var = c('prec', 'tmin', 'tmax'),
-#'     fixed_var = 'alt',
 #'     years = c("present", '2050', '2070'),
 #'     scenarios = c('rcp26', 'rcp45', 'rcp85'),
-#'     reorder = TRUE,
-#'     separator = '_')
+#'     alert = 6)
 #'
 #' perf_functions <-
-#' fit_curves(formula = performance ~ s(temp, bs = 'cs') + size,
-#'  data = FulanusPhysiology,
-#'  type = 'GAMM',
-#'  random = list(id = ~ 1),
-#'  separator = '_'
-#' )
+#'   fit_curves(formula = list(tpc_size = performance ~ s(temp, bs = 'cs') + size,
+#'     tpc_no_size = performance ~ s(temp, bs = 'cs')),
+#'     data = FulanusPhysiology,
+#'     fitFUN = mgcv::gamm,
+#'     args_list = list(random = list(id = ~ 1))
+#'   )
 #'
 #' Perf_rasters <-
-#' transform_rasters(raster_stack = FulanusEcoRasters,
-#'  transformFUN_args = list(temp = 'tmax', size = 10),
-#'  separator = '_',
-#'  transformFUN = perf_functions$predict$model_1)
+#'   transform_rasters(raster_stack = Fulanus_Ecorasters_download[[1]],
+#'     transformFUN = list(perf = perf_functions$tpc_size$predict),
+#'     transformFUN_args = list(temp = 'tmax', size = mean(FulanusPhysiology$size))
+#'   )
+#'
+#' # If the functions in `summarize_rasters`` are commutative, you can summarize before transforming, which is much faster.
+#'
+#' Phenology_mean <-
+#'   lapply(Fulanus_Ecorasters_download, summarize_rasters,
+#'     seasons = list(breeding = c(3:8), non_breeding = c(9:12, 1, 2)),
+#'     summaryFUN = list(tmax = c("mean"), tmin = c("mean"), prec = "sum"))
+#'
+#' Perf_rasters_mean <-
+#'   transform_rasters(raster_stack =  Phenology_mean[[1]],
+#'     transformFUN = list(perf = perf_functions$tpc_size$predict),
+#'     transformFUN_args = list(temp = 'tmax', size = mean(FulanusPhysiology$size))
+#'   )
+#'
+#' # The function works on RasterStacks, if you have a list of stacks, you can apply the function to each element using lapply
+#'
+#' Perf_rasters_list <- lapply(Phenology_mean, transform_rasters,
+#'   transformFUN = list(perf = perf_functions$tpc_size$predict),
+#'   transformFUN_args = list(temp = 'tmax', size = mean(FulanusPhysiology$size))
+#' )
+#'
 #'
 #' @export
 
@@ -133,9 +154,20 @@ transform_rasters <- function(raster_stack,
     raster_by_arg_by_rep %>%
     purrr::transpose()
 
-  transformed_rasters <- lapply(reversed_list, function(x){
+  list_names <-
+  plyr::alply(reversed_list, 1, function(x){
 
-    var_stack <- raster::stack(x)
+      strsplit(names(x[[1]]), separator)[[1]][-1] %>%
+      as.list() %>%
+      append(list(sep = separator)) %>%
+      do.call(paste, .)
+
+  }
+    )
+
+  names(reversed_list) <- list_names
+
+  transformed_rasters <- lapply(reversed_list, function(x){
 
     prediction <-
       lapply(transformFUN, function(y) {
@@ -146,7 +178,19 @@ transform_rasters <- function(raster_stack,
 
         formals(y)[names(new_default)] <- new_default
 
-        raster::calc(var_stack, fun = y)
+        ncores <- parallel::detectCores()
+        raster::beginCluster(ncores, type = 'SOCK')
+
+        names(x)[1] <- c("x")
+        if (length(x) > 1) names(x)[2] <- c("y")
+
+        overlay_list <- append(list(fun = y), x)
+
+        output <- do.call(what = raster::overlay, args = overlay_list)
+
+        raster::endCluster()
+
+        output
 
       }
       )
@@ -183,7 +227,8 @@ transform_rasters <- function(raster_stack,
     }
     )
 
-  return(transformed_stack)
+  return(raster::stack(transformed_stack))
+
 }
 
 lagged <- function(var, lag, stack) {

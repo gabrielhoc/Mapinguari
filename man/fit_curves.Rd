@@ -4,25 +4,18 @@
 \alias{fit_curves}
 \title{Creates functions relating environment to physiology.}
 \usage{
-fit_curves(formula, data, type, fixed = NULL, random = NULL, start = NULL,
-  correlation = NULL, ...)
+fit_curves(formula, data, fitFUN, args_list, separator = "_")
 }
 \arguments{
 \item{formula}{formula. Model formula.}
 
 \item{data}{data frame. Table containing variables in model formula.}
 
-\item{type}{character. Algorithm used for model. 'GAMM' or 'NLME'}
+\item{fitFUN}{call. Algorithm used for model.}
 
-\item{fixed}{named list. See \code{nlme::nlme}}
+\item{args_list}{named list. list of arguments to be passed to the function in fitFUN.}
 
-\item{random}{named list. See \code{mgcv::gamm} and \code{nlme::nlme}}
-
-\item{start}{named list. See \code{nlme::nlme}}
-
-\item{correlation}{named list. See \code{mgcv::gamm} and \code{nlme::nlme}}
-
-\item{...}{further parameters for \code{mgcv::gamm} or \code{nlme::nlme}}
+\item{separator}{character. Character that separates variable names, years and scenarios.}
 }
 \value{
 Returns a tibble containing model specifications, statistics and a predictor function.
@@ -32,18 +25,20 @@ Returns a tibble containing model specifications, statistics and a predictor fun
 }
 \examples{
 perf_functions <-
-  fit_curves(formula = performance ~ s(temp, bs = 'cs') + size,
+  fit_curves(formula = list(tpc_size = performance ~ s(temp, bs = 'cs') + size,
+    tpc_no_size = performance ~ s(temp, bs = 'cs')),
     data = FulanusPhysiology,
-    type = 'GAMM',
-    random = list(id = ~ 1)
+    fitFUN = mgcv::gamm,
+    args_list = list(random = list(id = ~ 1))
   )
 
-perf_functions <-
-  fit_curves(formula = performance ~ s(temp, bs = 'cs') + size,
+perf_functions2 <-
+  fit_curves(formula = list(tpc_size = performance ~ s(temp, bs = 'cs') + size,
+    tpc_no_size = performance ~ s(temp, bs = 'cs')),
     data = FulanusPhysiology,
-    type = 'GAMM',
-    random = list(id = ~ 1),
-    correlation = list(nlme::corAR1(form = ~ 1 | id))
+    fitFUN = gamm,
+    args_list = list(random = list(id = ~ 1),
+      correlation = nlme::corAR1(form = ~ 1 | id))
   )
 
 formula_list <-
@@ -52,27 +47,27 @@ formula_list <-
     performance ~ s(temp, bs = 'cs') + size,
     performance ~ s(temp, bs = 'cs') + hydration,
     performance ~ s(temp, bs = 'cs') + hydration + size
-    )
+  )
 
 perf_functions <-
   fit_curves(formula = formula_list,
     data = FulanusPhysiology,
-    type = 'GAMM',
-    random = list(id = ~ 1),
-    correlation = list(nlme::corAR1(form = ~ 1 | id)
-  ))
+    fitFUN = mgcv::gamm,
+    args_list = list(random = list(id = ~ 1))
+  )
 
-correlation_list <- list(a = nlme::corAR1(form = ~ 1 | id),
-  b = nlme::corAR1(0.1, form = ~ 1 | id),
-  c = nlme::corARMA(form = ~ 1 | id),
-  d = nlme::corARMA(0.1, form = ~ 1 | id))
+# allow multiple arguments
+
+correlation_list <- list(correlation = nlme::corAR1(form = ~ 1 | id),
+  correlation = nlme::corAR1(0.1, form = ~ 1 | id),
+  correlation = nlme::corARMA(form = ~ 1 | id),
+  correlation = nlme::corARMA(0.1, form = ~ 1 | id))
 
 perf_functions <-
   fit_curves(formula = formula_list,
     data = FulanusPhysiology,
-    type = 'GAMM',
-    random = list(id = ~ 1),
-    correlation = correlation_list
+    fitFUN = mgcv::gamm,
+    args_list = correlation_list
   )
 
 }

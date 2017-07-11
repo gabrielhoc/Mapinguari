@@ -4,28 +4,27 @@
 #'
 #' @param formula formula. Model formula.
 #' @param data data frame. Table containing variables in model formula.
-#' @param type character. Algorithm used for model. 'GAMM' or 'NLME'
-#' @param fixed named list. See \code{nlme::nlme}
-#' @param random named list. See \code{mgcv::gamm} and \code{nlme::nlme}
-#' @param start named list. See \code{nlme::nlme}
-#' @param correlation named list. See \code{mgcv::gamm} and \code{nlme::nlme}
-#' @param ... further parameters for \code{mgcv::gamm} or \code{nlme::nlme}
+#' @param fitFUN call. Algorithm used for model.
+#' @param args_list named list. list of arguments to be passed to the function in fitFUN.
+#' @param separator character. Character that separates variable names, years and scenarios.
 #'
 #' @return Returns a tibble containing model specifications, statistics and a predictor function.
 #' @examples
 #' perf_functions <-
-#'   fit_curves(formula = performance ~ s(temp, bs = 'cs') + size,
+#'   fit_curves(formula = list(tpc_size = performance ~ s(temp, bs = 'cs') + size,
+#'     tpc_no_size = performance ~ s(temp, bs = 'cs')),
 #'     data = FulanusPhysiology,
-#'     type = 'GAMM',
-#'     random = list(id = ~ 1)
+#'     fitFUN = mgcv::gamm,
+#'     args_list = list(random = list(id = ~ 1))
 #'   )
 #'
-#' perf_functions <-
-#'   fit_curves(formula = performance ~ s(temp, bs = 'cs') + size,
+#' perf_functions2 <-
+#'   fit_curves(formula = list(tpc_size = performance ~ s(temp, bs = 'cs') + size,
+#'     tpc_no_size = performance ~ s(temp, bs = 'cs')),
 #'     data = FulanusPhysiology,
-#'     type = 'GAMM',
-#'     random = list(id = ~ 1),
-#'     correlation = list(nlme::corAR1(form = ~ 1 | id))
+#'     fitFUN = gamm,
+#'     args_list = list(random = list(id = ~ 1),
+#'       correlation = nlme::corAR1(form = ~ 1 | id))
 #'   )
 #'
 #' formula_list <-
@@ -34,27 +33,27 @@
 #'     performance ~ s(temp, bs = 'cs') + size,
 #'     performance ~ s(temp, bs = 'cs') + hydration,
 #'     performance ~ s(temp, bs = 'cs') + hydration + size
-#'     )
+#'   )
 #'
 #' perf_functions <-
 #'   fit_curves(formula = formula_list,
 #'     data = FulanusPhysiology,
-#'     type = 'GAMM',
-#'     random = list(id = ~ 1),
-#'     correlation = list(nlme::corAR1(form = ~ 1 | id)
-#'   ))
+#'     fitFUN = mgcv::gamm,
+#'     args_list = list(random = list(id = ~ 1))
+#'   )
 #'
-#' correlation_list <- list(a = nlme::corAR1(form = ~ 1 | id),
-#'   b = nlme::corAR1(0.1, form = ~ 1 | id),
-#'   c = nlme::corARMA(form = ~ 1 | id),
-#'   d = nlme::corARMA(0.1, form = ~ 1 | id))
+#' # allow multiple arguments
+#'
+#' correlation_list <- list(correlation = nlme::corAR1(form = ~ 1 | id),
+#'   correlation = nlme::corAR1(0.1, form = ~ 1 | id),
+#'   correlation = nlme::corARMA(form = ~ 1 | id),
+#'   correlation = nlme::corARMA(0.1, form = ~ 1 | id))
 #'
 #' perf_functions <-
 #'   fit_curves(formula = formula_list,
 #'     data = FulanusPhysiology,
-#'     type = 'GAMM',
-#'     random = list(id = ~ 1),
-#'     correlation = correlation_list
+#'     fitFUN = mgcv::gamm,
+#'     args_list = correlation_list
 #'   )
 #'
 #' @export
@@ -62,9 +61,11 @@ fit_curves <- function(formula,
   data,
   fitFUN,
   args_list,
-  separator = '_',
-  formula_arg = 'formula'
+  separator = '_'
   ) {
+
+  # make this work for functions that don't have a 'formula' argument (e. g. nlme)
+  formula_arg <- 'formula'
 
   if (class(formula) != 'list') formula <- list(formula)
 
@@ -137,19 +138,26 @@ fit_curves <- function(formula,
 
     TPC_function <- function() {
 
-        match.call() %>%
-        as.list %>%
-        `[`(-1) %>%
-        predict(x, .) %>%
-        as.vector()
+      input <- as.list(match.call())[-1]
+
+      frmls <- formals()
+
+      all_args_list <-
+        `!`(names(frmls) %in% names(input)) %>%
+        `[`(frmls, .) %>%
+        append(input, .) %>%
+        lapply(eval)
+
+      args_mat <- do.call(data.frame, all_args_list)
+
+      plyr::alply(args_mat, 1, function(y) stats::predict(x, y)) %>%
+        unlist()
 
     } # close TPC function
 
     formals(TPC_function) <- args_list
 
     TPC_function
-
-    #list(predictFUN = TPC_function)
 
   } # close factory
   ) # close lapply

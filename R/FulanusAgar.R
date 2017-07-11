@@ -9,5 +9,4 @@
 #'   \item{carat}{weight of the diamond, in carats}
 #'   ...
 #' }
-#' @source \url{http://www.diamondse.info/}
 "FulanusAgar"

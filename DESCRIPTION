@@ -1,6 +1,6 @@
 Package: Mapinguari
 Type: Package
-Title: Provides tools for process-based species distribution modelling
+Title: Tools for process-based biogeographical analysis
 Version: 0.0.0.9999
 Authors@R: c(
     person("Gabriel", "Caetano", email = "gabrielhoc@gmail.com", role = c("aut", "cre")),
@@ -12,31 +12,22 @@ Depends: R (>= 3.3.1)
 License: GPL-2
 Encoding: UTF-8
 LazyData: true
-URL: http://github.com/gabrielhoc/Mapinguari-development
-BugReports: http://github.com/gabrielhoc/Mapinguari-development/issues
+URL: http://github.com/gabrielhoc/Mapinguari
+BugReports: http://github.com/gabrielhoc/Mapinguari/issues
 Suggests: 
     beepr,
     knitr,
     rmarkdown,
     testthat
 VignetteBuilder: knitr
-Imports: backports,
-    dplyr,
-    EcoHydRology,
-    ggmap,
-    ggplot2,
+Imports: 
     magrittr,
-    mgcv,
-    nlme,
     parallel,
-    plyr,
+    pander,
     purrr,
+    plyr,
     qdap,
     raster,
-    rgdal,
-    rlist,
-    snow,
     stringr,
     tibble,
-    velox
 RoxygenNote: 6.0.1

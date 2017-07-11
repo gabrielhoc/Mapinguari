@@ -9,16 +9,38 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-# The fate of *Fulanus*
+	Mapinguari is an add-on package for program R, aimed at providing tools to facilitate the incorporation of biological processes in biogeographical analyses. It offers conveniences in fitting and comparing physiological models, as well as spatially extrapolating those models. The functions to model physiology offer enough flexibility to account for plasticity in physiology and microclimatic variation in the extrapolation. The package also allows to estimate geographical variation in the duration of phenological events, and summarize spatial data during these events. The spatial information generated using physiological and phenological models can then be used as predictors in species distribution modelling, for which Mapinguari offers tools for adequate evaluation, consensus, plotting and comparision, as well as utilities to deal with common pitfalls such as auto correlation in occurrence records and colinearity in spatial predictors.
+	
+		It is well documented that climate change has severe effects on biodiversity. Species distribution modeling or SDM is a popular tool to predict individual species distributions and project the effects of these under diverse climate change models. Most SDMs are correlative and do not take into account biological processes underlying species responses to environmental variables. We aim to provide a modeling tool to fulfill this gap by estimating geographical layers with biologically relevant information that can be used in SDMs or other biogeographical analysis, as well as providing convenience and stimulating good practices for predictor selection and plotting. 
+		
+		 Mapinguari offers functions that facilitate the spatial extrapolation of models relating physiological measures of organisms, such as locomotor performance, metabolic and developmental rates or duration of activity to available spatialized information, such as climatic or geological variables. Those extrapolated values might function as an approximation of how well the organism’s body works under those conditions, and therefore, might be relevant for informing about the species distribution under current and future conditions, specially climate, which is expected to change drastically in the near future, potentially affecting the ability of organisms to inhabit certain regions. This ecophysiological projections can be informative by themselves, but also complement traditional correlative methods.
+		 
+		  The timing and duration of specific events in the life of an organism can be crucial for its existence, such as breeding, flowering, fruiting or hibernating seasons. During those seasons, some organisms might become specially vulnerable to external conditions, which means the conditions during those times can be more informative of the ability of the organisms to remain in an area. Some of those events happen periodically and predictably, determined either by cycles inherent to the organism or by external inffluences. Mapinguari offers tools to predict the timing and duration of those events under different conditions, as well as gathering information about these and other conditions during those times. This feature can be combined with the physiological extrapolations, allowing further complexity in modelling.
 
-*Fulanus beltranus* is a fictional species of lizard from Democratic Republic of Congo. We would like to find out how this species is going to do in different climate change scenarios. First let's look at the points where it is currently known to occurr. To access the distribution data, we must load package Mapinguari.
+The package is currently hosted on GitHub, this is how to install and load it, as well as how to access this manual:
 
-```{r, message = FALSE, warning = FALSE, fig.height = 6, fig.width = 6, eval=FALSE}
+```{r}
+# You need package devtools to install packages from GitHub
 library(devtools)
 
-install_github("gabrielhoc/Mapinguari")
+install_github("gabrielhoc/Mapinguari", build_vignettes = TRUE )
 
 library(Mapinguari)
+
+# This command access this manual
+vignette("Mapinguari")
+```
+
+Next, we are going to give an example of how to use the package, using some simulated data:
+
+# The fate of *Fulanus*
+
+*Fulanus beltranus* is a fictional species of lizard from Democratic Republic of Congo. We would like to find out how this species is going to do in different climate change scenarios. First let's look at the points where it is currently known to occurr. To access the table with distribution data 'FulanusDistribution', package Mapinguari has to be loaded. Here we use ggmap to plot the points over a image from Google Maps (insert copyright symbol).
+
+```{r, message = FALSE, warning = FALSE, fig.height = 6, fig.width = 6}
+# Load ggmap and ggplot2 to make the map
+library(ggmap)
+library(ggplot2)
 
 Fulanus_bbox <- ggmap::make_bbox(lat = Lat, 
   lon = Lon, 
@@ -36,19 +58,13 @@ ggmap::ggmap(Fulanus_big) +
     colour = 'red')
 ```
 
-# function Distribution
-
-It seems some points are in the ocean! Those must be wrong, let's use Mapinguari's `Distribution` fuction to clean them up.
-
-```{r}
-# insert here point clean up and plot again
-```
-
 # function get_rasters
 
 How does the climate looks like in this area? We can use function `get_rasters` to extract WorldClim surfaces for that area. The argument `ext` tells us which is the area you desire to crop your rasters around. It accepts either an Extent object with the coordinates of cropping limits, or a table of longitudes and latitudes, in which case it will grab the coordinates of the most extreme points and use those as the cropping limits. The argument `margin` adds to these limits, and it is on the same unit as the coordinates you supplied.
 
-```{r, message = FALSE, warning = FALSE, fig.height = 6, fig.width = 6, eval=FALSE}
+```{r, message = FALSE, warning = FALSE, fig.height = 6, fig.width = 6}
+library('Mapinguari')
+
 FulanusEcoRasters_present <-
    get_rasters(
      raster_source = "/Users/gabriel/Documents/Mapinguari/global_grids_10_minutes",
@@ -62,16 +78,15 @@ FulanusEcoRasters_present <-
 raster::plot(FulanusEcoRasters_present[[1]])
 ```
 
-`get_rasters` is able to download rasters from WorldClim, but you probably don't want to download them everytime you are executing the function. That's why the argument `raster_source` will also take a list of rasters from your workspace or a path to a folder containing those rasters.
+`get_rasters` is able to download rasters from WorldClim, but you probably don't want to download them every time you are executing the function. That's why the argument `raster_source` will also take a list of rasters from your workspace or a path to a folder containing those rasters.
 
 However, in order for Mapinguari to recognize which variables correspond to each year or scenario, you have to name your folders and list elements following the convention *variable_year_scenario*. The defaul character for separating those terms is "_", but you can change that, as long as you do the corresponding change to the argument `separator` in function. Some of your rasters will not be subject to scenarios, since they are measures of current climate, instead of projections. In that case you only have to name them *variable_year*, omitting the scenario term. The argument `baseline` identifies which years are not subject to scenarios, and the default is `present` and `baseline`, but it can be changed at your convenience. Some other variables are constant accross time, such as altitude. In that case you only have to write the name of the variable. Here is an example of how my folder is structured:
 
-```{r, eval=FALSE}
 image: ![](/Users/gabriel/Documents/Mapinguari/vignettes/folder_organization.png)
-```
+
 I'm going to assign the path to that directory to an object:
 
-```{r, eval=FALSE}
+```{r}
 my_directory <- "/Users/gabriel/Documents/Mapinguari/global_grids_10_minutes"
 ```
 
@@ -80,7 +95,7 @@ Why did I place some variables in the `non-fixed` argument and others in the `fi
 Another important argument for non-fixed variables is `reorder`, which will take the last two characters of your RasterLayer names, replace letters with zeros and order the layers in ascending order of those numbers. This is useful because of the way some of the WorldClim layers are named when you downloaded, which when stacked will be placed out of chronological order. This argument fixes that. But be careful if you are using layers with different names than the ones from WorldClim. If they are in the correct order when you stack them, `reorder` could scramble them, so set it to FALSE.
 
 Let's try doing some projections for the future years of 2050 and 2070:
-```{r, message = FALSE, warning = FALSE, fig.height = 6, fig.width = 6, eval=FALSE}
+```{r, message = FALSE, warning = FALSE, fig.height = 6, fig.width = 6}
 FulanusEcoRasters_future <-
    get_rasters(
      raster_source = my_directory,
@@ -90,8 +105,8 @@ FulanusEcoRasters_future <-
      years = c('2050', '2070'),
      scenarios = c('rcp26', 'rcp45', 'rcp85'),
      reorder = TRUE,
-     Phen_lim = "year",
-     Phen_summary = c(mean, sd))
+     seasons = list(year = c(1:12)),
+     summaryFUN = c("mean", "sd"))
 
 raster::plot(raster::stack(
   FulanusEcoRasters_future$`2050_rcp26`$tmax_year_mean, 
@@ -99,37 +114,13 @@ raster::plot(raster::stack(
   FulanusEcoRasters_future$`2050_rcp85`$tmax_year_mean))
 ```
 
-We might want to derive more complex variables that might be relevant to this species, such as Potential EvapoTranspiration (PET), Actual EvapoTranspiration (AET) or Climatic Water Deficit (CWD). Since those variables are calculated from the WorldClim variables, you need to supply those dependencies on `raster_source`. **make table of derivable variables and dependencies**. You also have to set the argument `derive` to TRUE, in order for the function to understand you are not trying to fetch the derived variables from `raster_source` (you can derive them the first time, save and load them from the directory like the other variables). 
-
-```{r, message = FALSE, warning = FALSE, fig.height = 6, fig.width = 6, eval=FALSE}
-FulanusEcoRasters_derived <-
-   get_rasters(
-     raster_source = my_directory,
-     ext = FulanusDistribution,
-     margin = 5,
-     non_fixed_var = c('tmin', 'tmax', 'prec', 'PET'),
-     years = c('present', '2050', '2070'),
-     scenarios = c('rcp26', 'rcp45', 'rcp85'),
-     reorder = TRUE,
-     derive = TRUE)
-
-raster::plot(FulanusEcoRasters_derived$present$PET_year_mean)
-```
-
-You might have noticed the argument `Phen_method`, which in our examples is set to 'year'. That means the `non-fixed` variables, which are usually in monthly resolution, will be averaged accross the year. If you want to preserve them in monthly resolution, you can set it to `month`. There is another setting, which is `season`, that I will describe in more detail when talking about the `Phenology` function.
-
 # function fit_curves
 
 This function main goal is to create models of the relationship between a physiological measure and a environmental one, and output a closure so the physiological measure can be easily extrapolated to other environmental data, such as spatial or temporal data. It also evaluates the models, allowing the users to compare different parameterizations. For now, the function wraps `mgcv::gamm()` and `nlme::nlme()`, allowing for flexible additive models and rigorous non-linear mixed models. You can get creative and use the functions for measures other than physiology. For example, you might want to fit a logisitic model of reproductive state against environment, which can be useful as an input for function `Phenology`.
 
 Back to *Fulanus*, we measured the maximum running speed of several individuals under different temperatures. We also recorded their body sizes, since that is a variable that is very likely to inffluence their performance. Here is how the data look like:
 
-```{r, eval=FALSE}
-head(FulanusPhysiology)
-
-# I will multiply temperatures by 10 so they are on the same scale as the rasters
-FulanusPhysiology$temp <- FulanusPhysiology$temp * 10
-
+```{r}
 head(FulanusPhysiology)
 ```
 
@@ -137,31 +128,34 @@ Note that we also attributed a number to each lizard to keep track of which liza
 
 The function is simple and accepts any argument from `mgcv::gamm()` or `nlme::nlme()`:
 
-```{r, eval=FALSE}
+```{r}
+library(mgcv)
+
 perf_functions <-
   fit_curves(formula = performance ~ s(temp, bs = 'cs') + size,
     data = FulanusPhysiology,
-    type = 'GAMM',
-    random = list(id = ~ 1)
+    fitFUN = gamm,
+    args_list = list(random = list(id = ~ 1))
   )
 ```
 
-`type` indicates which function will you use to build your model, it accepts the values 'GAMM' and 'NLME' (I didn't use `method` because that was an argument in nlme). `formula`, `data` and `random` are the same as in `mgcv::gamm()`, and you can find more detail about those at their package documentation. `formula` will describe the structure of your model, including smooth terms (for method 'GAMM') and nonlinear terms (for method 'NLME'). `data` is simply a data frame containing the variables specified in the formula. `random` accounts for the structure of random effects in your mixed model. 
+# update fit_curves description
 
 The function outputs a table containing informations about each model fitted and a closure to be used for predictions. You can access the closures and statistics by subsetting the table, as shown below.
 
-```{r, eval=FALSE}
-perf_functions$formula$model_1
-perf_functions$stats$model_1
-perf_functions$output$model_1
+```{r}
+perf_functions$stats
 
-my_tpc <- perf_functions$predict$model_1
+perf_functions$model_1$formula
+perf_functions$model_1$output
+
+my_tpc <- perf_functions$model_1$predict
 
 my_tpc(temp = 20, size = 10)
 ```
 
-```{r, eval=FALSE}
-gam_for_plot <- perf_functions$output$model_1
+```{r}
+gam_for_plot <- perf_functions$model_1$output
 
 plot(gam_for_plot$gam, 
   pages = 1, 
@@ -196,59 +190,54 @@ This closure can be combined with the output from `get_rasters` to create a rast
 
 `transform_rasters` does the link between your physiological model and your spatial environmental data. It will apply any function to each year/scenario combination, as long as the variables necessary for the model are present. Sometimes you might name variables differently on your model and on your rasters. To deal with this situation, the argument `Perf_args` acts as a dictionary. It is a named list, in which the names are the variables in the model and the arguments are character strings of the variables in the rasters. You might also supply a numerical constant instead of a character string. That way, this variable will be set to that value for all calculations. That might be useful for example, if your model contain individual covariates such as body size, and you want to set a standard value for every calculation, for example, average body size.
 
-```{r, message = FALSE, warning = FALSE, fig.height = 6, fig.width = 6, eval=FALSE}
+```{r, message = FALSE, warning = FALSE, fig.height = 6, fig.width = 6}
 FulanusEcoRasters_month <-
    get_rasters(
      raster_source = my_directory,
      ext = FulanusDistribution,
      margin = 5,
      non_fixed_var = c('tmax', 'prec'),
-     years = 'present',
-     Phen_method = 'month',
-     reorder = TRUE,
-     derive = TRUE)
-
+     years = 'present')
 
 Perf_rasters_month <-
-  transform_rasters(raster_source = FulanusEcoRasters_month,
-    Perf_args = list(temp = 'tmax', size = mean(FulanusPhysiology$size)),
-    separator = '_',
-    PerfFUN = my_tpc)
+  transform_rasters(raster_stack = FulanusEcoRasters_month[[1]],
+    transformFUN = list(perf = my_tpc),
+    transformFUN_args = list(temp = 'tmax', size = mean(FulanusPhysiology$size)),
+    separator = '_')
 
 raster::plot(Perf_rasters_month[[1]][[1]])
 ```
 
-#Phenology
+#summarize_rasters
 
 However, we know that the most crucial period for *Fulanus* population dynamics is their breeding period. They wil breed only on certain climatic conditions, what will cause their breeding period to vary spatially and temporally. In order to account for that, function `Phenology` partition month rasters according to the specified breeding period. You can input the starting and ending month of the phenological event with arguments `StartSeason` and `StopSeason`. This will make the partitioning uniform inside and accross rasters. If you want to account for spatial and temporal variation, you have to use argument `PhenFUN`, which accepts functions relating for local conditions to a binary representation of if the organisms are experiencing the phenological event or not. It could be a logistic model or a function setting hard thresholds, for example. The function `Phenology` can also be called from inside `get_rasters` or `transform_rasters`, partitioning the rasters as they are output. `Phenology` has also a `Phen_args` argument, which works in the same way as `Perf_args` described above
 
-```{r, message = FALSE, warning = FALSE, fig.height = 6, fig.width = 6, eval=FALSE}
+```{r, message = FALSE, warning = FALSE, fig.height = 6, fig.width = 6, eval = FALSE}
 
 # Fix this later: simulate data on breeding seasons and environmental conditions, then fit this model
 
 PhenFUN1 <- function(x) round(1/(1 + exp((150 - x)/2)), 2)
 
 Seasons_by_rain <-
-  lapply(FulanusEcoRasters_month, 
-    Phenology,
-    PhenFUN = PhenFUN1 ,
-    Phen_args = list(x = 'prec'))
+    lapply(FulanusEcoRasters_month, summarize_rasters,
+      seasons = list(breeding = PhenFUN1),
+      seasons_args = list(x = 'prec'),
+      summaryFUN = "mean")
 
-raster::plot(Seasons_by_rain$present$Season_length)
-raster::plot(Seasons_by_rain$present$tmax_Season)
-raster::plot(Seasons_by_rain$present$tmax_NonSeason)
+raster::plot(Seasons_by_rain$present$season_length)
+raster::plot(Seasons_by_rain$present$tmax_breeding_mean)
 ```
 
-```{r, fig.height = 6, fig.width = 6, eval=FALSE}
+```{r, fig.height = 6, fig.width = 6, eval = FALSE}
 # Let's say we are only interested on the periods when performance is bigger than 80.
 
 PhenFUN2 <- function(x) ifelse(x > 80, 1, 0)
 
 Seasons_by_performance <-
   lapply(Perf_rasters_month, 
-    Phenology,
-    PhenFUN = PhenFUN2 ,
-    Phen_args = list(x = 'Perf'))
+    summarize_rasters,
+    seasons = list(breeding = PhenFUN2) ,
+    season_args = list(x = 'perf'))
 
 raster::plot(Seasons_by_performance$present$Season_length)
 raster::plot(Seasons_by_performance$present$Perf_Season)
@@ -257,22 +246,21 @@ raster::plot(Seasons_by_performance$present$Perf_NonSeason)
 
 Note that the season by performance maps have blank spots both in the Season and NonSeason rasters, while the season by rain maps have blank spots only on the Season raster. Why is that? Let's look at the values for the season length at the present for both the `Seasons_by_rain` and `Seasons_by_performance`.
 
-```{r, eval=FALSE}
-Seasons_by_rain$present$Season_length
-Seasons_by_performance$present$Season_length
+```{r, eval = FALSE}
+Seasons_by_rain$present$season_length
+Seasons_by_performance$present$season_length
 ```
 
 You can see that the season by rain raster ranges from 0 to 9, that means that the species is unable to breed in some places, and the places where it breeds for longer, the breeding season lasts 9 months. While the season by performance raster ranges from 0 to 12, that means there are places where the species can't breed and places where the species can breed all year long. That shows on the map as the blank spots. If the values are 0 on the Season raster, it means the species can't breed in that location, if they are 0 in the NonSeason raster, it means they breed all year long in that location.
 
-```{r, eval=FALSE}
+```{r, eval = FALSE}
 #load libraries
 library(raster)
-library(ggplot2)
 library(magrittr)
 
- prec_during_breeding <- Seasons_by_rain$present$prec_Season
- tmax_during_breeding <- Seasons_by_rain$present$tmax_Season
- season_length_breeding <- Seasons_by_rain$present$Season_length
+ prec_during_breeding <- Seasons_by_rain$present$prec_year_mean
+ tmax_during_breeding <- Seasons_by_rain$present$tmax_year_mean
+ season_length_breeding <- Seasons_by_rain$present$season_length
 
 map_ext <-
   prec_during_breeding %>% 
