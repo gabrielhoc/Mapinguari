@@ -131,7 +131,7 @@ get_rasters <- function(raster_source = NULL,
 
   cropped_raster_list <- lapply(stack_list[!is.na(stack_list)], function(x){
 
-    raster::crop(x = x, y = ext)
+    raster::stack(raster::crop(x, ext))
 
   } # close function
   ) # close lapply

@@ -189,6 +189,17 @@ Perf_rasters_list <- lapply(FulanusEcoRasters_future, transform_rasters,
   transformFUN = list(perf = my_tpc),
   transformFUN_args = list(temp = 'tmax', size = mean(FulanusPhysiology$size))
 )
+
+raster::plot(Perf_rasters_tmax[[1]][[1]])
+```
+
+The function operates in RasterStacks, if you want to apply it to a list, you can use `lapply`:
+
+```{r}
+Perf_rasters_list <- lapply(FulanusEcoRasters_future, transform_rasters,
+  transformFUN = list(perf = my_tpc),
+  transformFUN_args = list(temp = 'tmax', size = mean(FulanusPhysiology$size))
+)
 ```
 
 Function `transform_rasters` is computationally intensive, but it can be parallelized. Another way to reduce the amount of time needed is to reduce the number of rasters in the calculation. So far we have been applying `transform_rasters` to RasterStacks with 12 layers for each variable, one for each month. If you are interested, for example, in the average year performance, it is more efficient to average all 12 month layers and then apply `transform_rasters` to the resulting average layer, which can be done with function `summarize_rasters`
@@ -232,8 +243,11 @@ Seasons_by_rain <-
 
 # a new `season_length` layer will be created, with the duration of the season.
 
-raster::plot(Seasons_by_rain$`2050rcp26`$season_length)
-raster::plot(Seasons_by_rain$`2050rcp26`$tmax_breeding_mean)
+raster::plot(Seasons_by_rain$present$season_length)
+raster::plot(Seasons_by_rain$present$tmax_breeding_mean)
+```
+
+```{r, fig.height = 6, fig.width = 6, eval = FALSE}
 
 # The function can also be a condition. Let's say we are only interested on the periods when performance is bigger than 80.
 
