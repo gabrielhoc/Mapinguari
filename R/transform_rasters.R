@@ -178,15 +178,12 @@ transform_rasters <- function(raster_stack,
 
         formals(y)[names(new_default)] <- new_default
 
-        ncores <- parallel::detectCores()
+        calc_stack <- raster::stack(x)
+
+        ncores <- parallel::detectCores() - 1
         raster::beginCluster(ncores, type = 'SOCK')
 
-        names(x)[1] <- c("x")
-        if (length(x) > 1) names(x)[2] <- c("y")
-
-        overlay_list <- append(list(fun = y), x)
-
-        output <- do.call(what = raster::overlay, args = overlay_list)
+        output <- raster::clusterR(calc_stack, raster::overlay, args = list(fun = y))
 
         raster::endCluster()
 

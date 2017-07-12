@@ -15,7 +15,6 @@
 #' @param baseline character vector. Names of years not subject to scenarios.
 #' @param separator character. Character that separates variable names, years and scenarios.
 #' @param projection_model character. Projection model for future variables. Must be any model accepted in \code{raster::getData}
-#' @param download_var character vector. Which of the supplied variables should be downloaded?
 #' @param reorder logical. If TRUE, will use last two characters of layer names in RasterStacks with 12 layers to order them in ascending order.
 #' @param seasons numerical vector or function. Months at the beggining and end of phenological events, or function relating phenological event to environmental conditions. If NULL, no summarizing is made (remains by month).
 #' @param seasons_args named list of strings. Correspondence between PhenFUN arguments and raster names.
@@ -76,7 +75,6 @@ get_rasters <- function(raster_source = NULL,
   baseline = "present",
   separator = '_',
   projection_model = 'MP',
-  download_var = NULL,
   seasons = NULL,
   reorder = FALSE,
   seasons_args = NULL,
@@ -129,19 +127,14 @@ get_rasters <- function(raster_source = NULL,
 
   }
 
-  # crop rasters (this is a bottleneck, so I'm parallelizing. There is a package called velox that supposedly crops faster, I haven't tried it yet.)
-
-  ncores <- parallel::detectCores()
-  raster::beginCluster(ncores, type = 'SOCK')
+  # crop rasters
 
   cropped_raster_list <- lapply(stack_list[!is.na(stack_list)], function(x){
 
-    raster::stack(raster::crop(x, ext))
+    raster::crop(x = x, y = ext)
 
   } # close function
   ) # close lapply
-
-  raster::endCluster()
 
   # if reorder is 'TRUE', reorder layers by the last two digits
 

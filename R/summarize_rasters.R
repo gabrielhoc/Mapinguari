@@ -111,9 +111,13 @@ summarize_rasters <- function(raster_stack,
       vars_only <-
         raster_stack[[which(unlist(split_vars) == pred_raster)]]
 
-      Phen_rasters <-
-        raster::overlay(x = vars_only, fun = seasons) %>%
+      ncores <- parallel::detectCores() - 1
+      raster::beginCluster(ncores, type = 'SOCK')
+
+      Phen_rasters <- raster::clusterR(vars_only, raster::overlay, args = list(fun = seasons)) %>%
         raster::stack()
+
+      raster::endCluster()
 
       names(Phen_rasters) <- paste("phen", 1:time_res, sep = separator)
 
@@ -158,9 +162,6 @@ summarize_rasters <- function(raster_stack,
   if (length(Phen_stacks) > 0) {
   separated_rasters <- append(separated_rasters,list(phen = Phen_stacks))
   }
-
-    ncores <- parallel::detectCores()
-    raster::beginCluster(ncores, type = 'SOCK')
 
     if (class(summaryFUN) != "list") {
 
@@ -295,8 +296,6 @@ summarize_rasters <- function(raster_stack,
 
       } # close function
       ) # close rapply
-
-    raster::endCluster()
 
     summarized_stack <- raster::stack(summarized_rasters)
 
