@@ -131,12 +131,12 @@ get_rasters <- function(raster_source = NULL,
 
   # crop rasters (this is a bottleneck, so I'm parallelizing. There is a package called velox that supposedly crops faster, I haven't tried it yet.)
 
-  ncores <- parallel::detectCores()
+  ncores <- parallel::detectCores() - 1
   raster::beginCluster(ncores, type = 'SOCK')
 
   cropped_raster_list <- lapply(stack_list[!is.na(stack_list)], function(x){
 
-    raster::stack(raster::crop(x, ext))
+    raster::clusterR(x, raster::crop, args = list(y = ext))
 
   } # close function
   ) # close lapply

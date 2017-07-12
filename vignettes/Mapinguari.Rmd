@@ -35,7 +35,7 @@ Next, we are going to give an example of how to use the package, using some simu
 
 # The fate of *Fulanus*
 
-*Fulanus beltranus* is a fictional species of lizard from Democratic Republic of Congo. We would like to find out how this species is going to do in different climate change scenarios. First let's look at the points where it is currently known to occurr. To access the table with distribution data 'FulanusDistribution', package Mapinguari has to be loaded. Here we use ggmap to plot the points over a image from Google Maps (insert copyright symbol).
+*Fulanus beltranus* is a fictional species of lizard from Democratic Republic of Congo. We would like to find out how this species is going to do in different climate change scenarios. First let's look at the points where it is currently known to occurr. To access the table with distribution data `FulanusDistribution`, package Mapinguari has to be loaded. Here we use ggmap to plot the points over a image from Google Maps (copyright Google).
 
 ```{r, message = FALSE, warning = FALSE, fig.height = 6, fig.width = 6}
 # Load ggmap and ggplot2 to make the map
@@ -58,9 +58,11 @@ ggmap::ggmap(Fulanus_big) +
     colour = 'red')
 ```
 
+First, let's get some information on the climate of this region.
+
 # function get_rasters
 
-How does the climate looks like in this area? We can use function `get_rasters` to extract WorldClim surfaces for that area. The argument `ext` tells us which is the area you desire to crop your rasters around. It accepts either an Extent object with the coordinates of cropping limits, or a table of longitudes and latitudes, in which case it will grab the coordinates of the most extreme points and use those as the cropping limits. The argument `margin` adds to these limits, and it is on the same unit as the coordinates you supplied.
+How does the climate looks like in this area? We can use function `get_rasters` to extract WorldClim surfaces for that area. The argument `ext` tells us which is the area you desire to crop your rasters around. It accepts either a numerical vector with the coordinates of cropping limits (in order: western most longitude, easter most longitude, southern most latitude then northern most latitude), or a table of longitudes and latitudes, in which case it will grab the coordinates of the most extreme points and use those as the cropping limits. The argument `margin` adds to these limits, and it is on the same unit as the coordinates you supply.
 
 ```{r, message = FALSE, warning = FALSE, fig.height = 6, fig.width = 6}
 library('Mapinguari')
@@ -78,9 +80,9 @@ FulanusEcoRasters_present <-
 raster::plot(FulanusEcoRasters_present[[1]])
 ```
 
-`get_rasters` is able to download rasters from WorldClim, but you probably don't want to download them every time you are executing the function. That's why the argument `raster_source` will also take a list of rasters from your workspace or a path to a folder containing those rasters.
+`get_rasters` is able to download rasters from WorldClim, but you probably don't want to download them every time you are executing the function. That's why the argument `raster_source` will also take a list of rasters from your workspace or a path to a folder containing those rasters. These options also have the advantage of being able to input any raster you want, not being limited to the ones you can download from WorldClim.
 
-However, in order for Mapinguari to recognize which variables correspond to each year or scenario, you have to name your folders and list elements following the convention *variable_year_scenario*. The defaul character for separating those terms is "_", but you can change that, as long as you do the corresponding change to the argument `separator` in function. Some of your rasters will not be subject to scenarios, since they are measures of current climate, instead of projections. In that case you only have to name them *variable_year*, omitting the scenario term. The argument `baseline` identifies which years are not subject to scenarios, and the default is `present` and `baseline`, but it can be changed at your convenience. Some other variables are constant accross time, such as altitude. In that case you only have to write the name of the variable. Here is an example of how my folder is structured:
+However, in order for Mapinguari to recognize which variables correspond to each year or scenario, you have to name your folders and list elements following the convention *variable_year_scenario*. The default character for separating those terms is "_", but you can change that, as long as you do the corresponding change to the argument `separator` in the function. Some of your rasters will not be subject to scenarios, since they are measures of current climate, instead of projections. In that case you only have to name them *variable_year*, omitting the scenario term. The argument `baseline` identifies which years are not subject to scenarios. The default for this argument is `present`, but it can be changed at your convenience. Some other variables are constant accross time, such as altitude. In that case you only have to write the name of the variable. Here is an example of how my folder is structured:
 
 image: ![](/Users/gabriel/Documents/Mapinguari/vignettes/folder_organization.png)
 
@@ -92,9 +94,10 @@ my_directory <- "/Users/gabriel/Documents/Mapinguari/global_grids_10_minutes"
 
 Why did I place some variables in the `non-fixed` argument and others in the `fixed` argument? Well, that will become relevant once we start making future projections. Variables on `non_fixed` are things such as climate, which you expect to change in different times and future scenarios, while variables in `fixed` are things such as geological features, which you expect to remain constant accross the time projected.
 
-Another important argument for non-fixed variables is `reorder`, which will take the last two characters of your RasterLayer names, replace letters with zeros and order the layers in ascending order of those numbers. This is useful because of the way some of the WorldClim layers are named when you downloaded, which when stacked will be placed out of chronological order. This argument fixes that. But be careful if you are using layers with different names than the ones from WorldClim. If they are in the correct order when you stack them, `reorder` could scramble them, so set it to FALSE.
+Another important argument for non-fixed variables is `reorder`, which will take the last two characters of your RasterLayer names, replace letters with zeros and order the layers in ascending order of those numbers. This is useful because of the way some of the WorldClim layers are named when you download them, which when stacked will be placed out of chronological order. This argument fixes that. But be careful if you are using layers with different names than the ones from WorldClim. If they are in the correct order when you stack them, `reorder` could scramble them, so set it to FALSE.
 
 Let's try doing some projections for the future years of 2050 and 2070:
+
 ```{r, message = FALSE, warning = FALSE, fig.height = 6, fig.width = 6}
 FulanusEcoRasters_future <-
    get_rasters(
@@ -104,19 +107,16 @@ FulanusEcoRasters_future <-
      non_fixed_var = c('prec', 'tmin', 'tmax'),
      years = c('2050', '2070'),
      scenarios = c('rcp26', 'rcp45', 'rcp85'),
-     reorder = TRUE,
-     seasons = list(year = c(1:12)),
-     summaryFUN = c("mean", "sd"))
+     reorder = TRUE)
 
-raster::plot(raster::stack(
-  FulanusEcoRasters_future$`2050_rcp26`$tmax_year_mean, 
-  FulanusEcoRasters_future$`2050_rcp45`$tmax_year_mean, 
-  FulanusEcoRasters_future$`2050_rcp85`$tmax_year_mean))
+raster::plot(FulanusEcoRasters_future$`2050_rcp26`)
 ```
+
+Now that we have information on the climate where the species live, let's get some information on the species physiology.
 
 # function fit_curves
 
-This function main goal is to create models of the relationship between a physiological measure and a environmental one, and output a closure so the physiological measure can be easily extrapolated to other environmental data, such as spatial or temporal data. It also evaluates the models, allowing the users to compare different parameterizations. For now, the function wraps `mgcv::gamm()` and `nlme::nlme()`, allowing for flexible additive models and rigorous non-linear mixed models. You can get creative and use the functions for measures other than physiology. For example, you might want to fit a logisitic model of reproductive state against environment, which can be useful as an input for function `Phenology`.
+This function main goal is to create models of the relationship between a physiological measure and a environmental one, and output a vectorized function that is able to output the model prediction for any value inputed, so the physiological measures can be extrapolated to other environmental data, such as spatial or temporal data. It also evaluates the models, allowing the users to compare different parameterizations. This function is actually a wrapper around fitting functions specified by the user, which are defined in argument `fitFUN`. This can be any function that outputs a model that works with function `predict`, such as `glm` or `gamm` from package `mgcv`. You can get creative and use the functions for measures other than physiology. For example, you might want to fit a logisitic model of reproductive state against environment, which can be useful as an input for function `summarize_rasters`, as we will see later.
 
 Back to *Fulanus*, we measured the maximum running speed of several individuals under different temperatures. We also recorded their body sizes, since that is a variable that is very likely to inffluence their performance. Here is how the data look like:
 
@@ -126,254 +126,140 @@ head(FulanusPhysiology)
 
 Note that we also attributed a number to each lizard to keep track of which lizard did which trial. That is important because, since the same lizard ran different trials, the data points are not independent and we have to account for that when building our model.
 
-The function is simple and accepts any argument from `mgcv::gamm()` or `nlme::nlme()`:
+This table is inputed to `fit_curves` in the argument `data`, and the model parameterization is specified in argument `formula`. You can name the models by putting them on a named list. The function accepts any argument from the function specified in `fitFUN`, as long as they are inputed as a named list on argument `args_list`:
 
 ```{r}
 library(mgcv)
 
+# Here is an example without naming the models. They will be assigned a generic name.
+perf_functions_no_name <-
+  fit_curves(formula =  performance ~ s(temp, bs = 'cs') + size,
+    data = FulanusPhysiology,
+    fitFUN = gamm,
+    args_list = list(random = list(id = ~ 1))
+  )
+
+# It is easier to keep track if you name them something meaningful (TPC means thermal performance curve)
 perf_functions <-
-  fit_curves(formula = performance ~ s(temp, bs = 'cs') + size,
+  fit_curves(formula = list(tpc_gamm_size = performance ~ s(temp, bs = 'cs') + size),
     data = FulanusPhysiology,
     fitFUN = gamm,
     args_list = list(random = list(id = ~ 1))
   )
 ```
 
-# update fit_curves description
-
-The function outputs a table containing informations about each model fitted and a closure to be used for predictions. You can access the closures and statistics by subsetting the table, as shown below.
+The function prints a table containing statitistics on each model, for comparison, and outputs a list containing that table, as well as a sub list for each model, containing the predictor function, raw model output and inputed arguments. You can assign the predictor function, which can be applied to any value.
 
 ```{r}
 perf_functions$stats
 
-perf_functions$model_1$formula
-perf_functions$model_1$output
+perf_functions$tpc_gamm_size$predict
+perf_functions$tpc_gamm_size$formula
+perf_functions$tpc_gamm_size$output
 
-my_tpc <- perf_functions$model_1$predict
+my_tpc <- perf_functions$tpc_gamm_size$predict
 
-my_tpc(temp = 20, size = 10)
+my_tpc(temp = 20, size = 3)
+my_tpc(temp = 20:40, size = 3)
 ```
 
-```{r}
-gam_for_plot <- perf_functions$model_1$output
-
-plot(gam_for_plot$gam, 
-  pages = 1, 
-  residuals = TRUE, 
-  pch = 19, 
-  seWithMean = TRUE, 
-  shade = TRUE, 
-  shade.col = "gray")
-
-gam_for_plot$gam$data <- FulanusPhysiology
-
-pred_plot <- visreg::visreg(gam_for_plot$gam, "temp", type = "conditional", plot = FALSE)
-pred_plot$fit$performance <- mgcv::predict.gam(object = gam_for_plot$gam, newdata = pred_plot$fit)
-
-# The ggplot:
-ggplot2::ggplot(pred_plot$fit, ggplot2::aes(x = temp, y = performance)) + 
-  ggplot2::geom_line() +
-  ggplot2::geom_line(ggplot2::aes(y = visregLwr), linetype = "dashed") + 
-  ggplot2::geom_line(ggplot2::aes(y = visregUpr), linetype = "dashed") +
-  ggplot2::geom_jitter(FulanusPhysiology, mapping = ggplot2::aes(x = temp, y = performance, size = size, colour = id)) +
-  ggplot2::scale_size_continuous(range = c(2,4)) +
-  ggplot2::geom_rug() +
-  ggplot2::xlab("Temperature °C") +
-  ggplot2::ylab("Speed m/s") + 
-  ggplot2::theme(legend.position = "none") +
-  ggplot2::ylim(0, 175)
-```
-
-This closure can be combined with the output from `get_rasters` to create a raster of physiology, which varies according to local environmental conditions. This is the subject of the next function.
+The predictor function can be combined with the output from `get_rasters` to create a raster of physiology, which varies according to local environmental conditions. This is the subject of the next function, `trasform_rasters`.
 
 # transform_rasters
 
-`transform_rasters` does the link between your physiological model and your spatial environmental data. It will apply any function to each year/scenario combination, as long as the variables necessary for the model are present. Sometimes you might name variables differently on your model and on your rasters. To deal with this situation, the argument `Perf_args` acts as a dictionary. It is a named list, in which the names are the variables in the model and the arguments are character strings of the variables in the rasters. You might also supply a numerical constant instead of a character string. That way, this variable will be set to that value for all calculations. That might be useful for example, if your model contain individual covariates such as body size, and you want to set a standard value for every calculation, for example, average body size.
+`transform_rasters` does the link between your physiological model and your spatial environmental data. It will apply any function to each year/scenario combination, as long as the variables necessary for the model are present. The predictor function is inputed on argument `transformFUN`. It doesn't have to be a function made by `fit_curves` necesesarily, any vectorized function should work (hopefully). Sometimes you might name variables differently on your model and on your rasters, or you want flexibility to input different rasters forthe same model argument (for example, for temperature in a TPC, you might want to use either minimum or maximum temperatures). To deal with these situations, the argument `transformFUN_args` acts as a dictionary. It is a named list, in which the names are the variables in the model and the arguments are character strings of the variables in the rasters. You might also supply a numerical constant instead of a character string. That way, this variable will be set to that value for all calculations. That might be useful for example, if your model contain individual covariates such as body size, and you want to set a standard value for every calculation, for example, average body size. The name of the resulting layers can be specified by inputing a named list on argument `transformFUN`, so each predictor function will be associated with a name.
 
 ```{r, message = FALSE, warning = FALSE, fig.height = 6, fig.width = 6}
-FulanusEcoRasters_month <-
-   get_rasters(
-     raster_source = my_directory,
-     ext = FulanusDistribution,
-     margin = 5,
-     non_fixed_var = c('tmax', 'prec'),
-     years = 'present')
+# You can calculate the performance for minimum and maximum temperatures, by changing the correspondence in ` transformFUN_args`
 
-Perf_rasters_month <-
-  transform_rasters(raster_stack = FulanusEcoRasters_month[[1]],
+Perf_rasters_tmax <-
+  transform_rasters(raster_stack = FulanusEcoRasters_present[[1]],
     transformFUN = list(perf = my_tpc),
-    transformFUN_args = list(temp = 'tmax', size = mean(FulanusPhysiology$size)),
-    separator = '_')
+    transformFUN_args = list(temp = 'tmax', size = mean(FulanusPhysiology$size)))
 
-raster::plot(Perf_rasters_month[[1]][[1]])
+Perf_rasters_tmin <-
+  transform_rasters(raster_stack = FulanusEcoRasters_present[[1]],
+    transformFUN = list(perf = my_tpc),
+    transformFUN_args = list(temp = 'tmin', size = mean(FulanusPhysiology$size)))
+
+raster::plot(Perf_rasters_tmax[[1]][[1]])
 ```
+
+The function operates in RasterStacks, if you want to apply it to a list, you can use `lapply`:
+
+```{r}
+Perf_rasters_list <- lapply(FulanusEcoRasters_future, transform_rasters,
+  transformFUN = list(perf = my_tpc),
+  transformFUN_args = list(temp = 'tmax', size = mean(FulanusPhysiology$size))
+)
+```
+
+Function `transform_rasters` is computationally intensive, but it can be parallelized. Another way to reduce the amount of time needed is to reduce the number of rasters in the calculation. So far we have been applying `transform_rasters` to RasterStacks with 12 layers for each variable, one for each month. If you are interested, for example, in the average year performance, it is more efficient to average all 12 month layers and then apply `transform_rasters` to the resulting average layer, which can be done with function `summarize_rasters`
 
 #summarize_rasters
 
-However, we know that the most crucial period for *Fulanus* population dynamics is their breeding period. They wil breed only on certain climatic conditions, what will cause their breeding period to vary spatially and temporally. In order to account for that, function `Phenology` partition month rasters according to the specified breeding period. You can input the starting and ending month of the phenological event with arguments `StartSeason` and `StopSeason`. This will make the partitioning uniform inside and accross rasters. If you want to account for spatial and temporal variation, you have to use argument `PhenFUN`, which accepts functions relating for local conditions to a binary representation of if the organisms are experiencing the phenological event or not. It could be a logistic model or a function setting hard thresholds, for example. The function `Phenology` can also be called from inside `get_rasters` or `transform_rasters`, partitioning the rasters as they are output. `Phenology` has also a `Phen_args` argument, which works in the same way as `Perf_args` described above
+Function `summarize_rasters` allows us to not only average, but also calculate standard deviations, totals, variance or any other summary function for the month layers. The argument `seasons` allows you to specify the months to be summarized. In this case, since we are interested in the whole year, but we can set `seasons` to a part of the year, or to multiple parts.
 
-```{r, message = FALSE, warning = FALSE, fig.height = 6, fig.width = 6, eval = FALSE}
+```{r}
+Fulanus_present_year_summaries <-
+   summarize_rasters(Fulanus_Ecorasters_present[[1]],
+    seasons = list(year = c(1:12)),
+    summaryFUN = list(tmax = c("mean", "sd"), tmin = c("mean", "sd"), prec = "sum"))
 
+# Like `transform_rasters`, you can apply `summarize_rasters` over a list using lapply
+Fulanus_present_year_summaries <-   
+lapply(Fulanus_Ecorasters_future, summarize_rasters,
+    seasons = list(year = c(1:12)),
+    summaryFUN = list(tmax = c("mean", "sd"), tmin = c("mean", "sd"), prec = "sum"))
+
+Fulanus_present_year_summaries <-
+   summarize_rasters(Fulanus_Ecorasters_present[[1]],
+    seasons = list(breeding = c(3:6), growing = c(8:11)),
+    summaryFUN = list(tmax = c("mean", "sd"), tmin = c("mean", "sd"), prec = "sum"))
+```
+
+Now, let's say the most crucial period for *Fulanus* population dynamics is their breeding period and they wil breed only under certain climatic conditions. This might cause their breeding period to vary spatially and temporally. In order to account for that, function `summarize_rasters` can take other functions in argument `seasons`, which will take the environmental surfaces supplied as arguments and decide based on the values for each pixel in each raster if it is included in that season or not. This allows spatial variation in the seasons. `summarize_rasters` also has a `season_args` argument, which works as translation between function arguments and raster names, in the same way as `transformFUN_args` described above
+
+```{r, message = FALSE, warning = FALSE, fig.height = 6, fig.width = 6}
+
+# Let's try first with a logistic function
 # Fix this later: simulate data on breeding seasons and environmental conditions, then fit this model
 
 PhenFUN1 <- function(x) round(1/(1 + exp((150 - x)/2)), 2)
 
 Seasons_by_rain <-
-    lapply(FulanusEcoRasters_month, summarize_rasters,
+    lapply(FulanusEcoRasters_future, summarize_rasters,
       seasons = list(breeding = PhenFUN1),
       seasons_args = list(x = 'prec'),
       summaryFUN = "mean")
 
-raster::plot(Seasons_by_rain$present$season_length)
-raster::plot(Seasons_by_rain$present$tmax_breeding_mean)
-```
+# a new `season_length` layer will be created, with the duration of the season.
 
-```{r, fig.height = 6, fig.width = 6, eval = FALSE}
-# Let's say we are only interested on the periods when performance is bigger than 80.
+raster::plot(Seasons_by_rain$`2050rcp26`$season_length)
+raster::plot(Seasons_by_rain$`2050rcp26`$tmax_breeding_mean)
+
+# The function can also be a condition. Let's say we are only interested on the periods when performance is bigger than 80.
 
 PhenFUN2 <- function(x) ifelse(x > 80, 1, 0)
 
 Seasons_by_performance <-
-  lapply(Perf_rasters_month, 
+  lapply(Perf_rasters_tmax, 
     summarize_rasters,
     seasons = list(breeding = PhenFUN2) ,
     season_args = list(x = 'perf'))
 
-raster::plot(Seasons_by_performance$present$Season_length)
-raster::plot(Seasons_by_performance$present$Perf_Season)
-raster::plot(Seasons_by_performance$present$Perf_NonSeason)
+raster::plot(Seasons_by_performance$present$season_length)
+raster::plot(Seasons_by_performance$present$perf_breeding)
+
 ```
+
+We haven't input anything on `summaryFUN`! If that happens, the function will return the result of the function in `seasons` for each month, in our case, it will show the areas that allow breeding for every month. What the function does is generate these rasters, multiplies then by the corresponding rasters for the other variables in that month, then applies the function in `summaryFUN`. While that might be work well with some functions, like `sum`, it does not make sense to do it with `mean`, since the proportion resulted from the function in `seasons` is not accounted for in the operation. For us to get an accurate average, given spatial variation in season, we would need a `weighted.mean`. That is a summary function that needs additional arguments, the weights. To input additional arguments for summary functions, we use argument `summaryFUN_args`
 
 Note that the season by performance maps have blank spots both in the Season and NonSeason rasters, while the season by rain maps have blank spots only on the Season raster. Why is that? Let's look at the values for the season length at the present for both the `Seasons_by_rain` and `Seasons_by_performance`.
 
-```{r, eval = FALSE}
+```{r}
 Seasons_by_rain$present$season_length
 Seasons_by_performance$present$season_length
 ```
 
 You can see that the season by rain raster ranges from 0 to 9, that means that the species is unable to breed in some places, and the places where it breeds for longer, the breeding season lasts 9 months. While the season by performance raster ranges from 0 to 12, that means there are places where the species can't breed and places where the species can breed all year long. That shows on the map as the blank spots. If the values are 0 on the Season raster, it means the species can't breed in that location, if they are 0 in the NonSeason raster, it means they breed all year long in that location.
-
-```{r, eval = FALSE}
-#load libraries
-library(raster)
-library(magrittr)
-
- prec_during_breeding <- Seasons_by_rain$present$prec_year_mean
- tmax_during_breeding <- Seasons_by_rain$present$tmax_year_mean
- season_length_breeding <- Seasons_by_rain$present$season_length
-
-map_ext <-
-  prec_during_breeding %>% 
-  raster::extent() %>% 
-  as.vector()
-
-names(map_ext) <- c("left", "right", "bottom", "top")
-
-Fulanus_big <- ggmap::get_map(location = map_ext, 
-  source = "stamen", 
-  maptype = "toner-hybrid")
-
-Fulanus_big
-
-borders <- ggmap::ggmap(Fulanus_big)
-
-#open ASCII file using ‘raster’ command, which converts the ASCII to a raster object
-map <- prec_during_breeding
-
-#convert the raster to points for plotting
-map.p <- rasterToPoints(map)
-
-#Make the points a dataframe for ggplot
-prec_df <- data.frame(map.p)
-#Make appropriate column headings
-colnames(prec_df) <- c("Longitude", "Latitude", "MAP")
-
-
-#open ASCII file using ‘raster’ command, which converts the ASCII to a raster object
-map <- tmax_during_breeding
-
-#convert the raster to points for plotting
-map.p <- rasterToPoints(map)
-
-#Make the points a dataframe for ggplot
-tmax_df <- data.frame(map.p)
-#Make appropriate column headings
-colnames(tmax_df) <- c("Longitude", "Latitude", "MAP")
-
-#open ASCII file using ‘raster’ command, which converts the ASCII to a raster object
-map <- season_length_breeding
-
-#convert the raster to points for plotting
-map.p <- rasterToPoints(map)
-
-#Make the points a dataframe for ggplot
-length_df <- data.frame(map.p)
-#Make appropriate column headings
-colnames(length_df) <- c("Longitude", "Latitude", "MAP")
-
-#Call in point data, in this case a fake transect (csv file with lat and lon coordinates)
-sites <- FulanusDistribution
-
-#Now make the map
-prec_plot <-
-  borders +
-  geom_raster(data = prec_df, aes(y = Latitude, x = Longitude, fill = MAP)) +
-  geom_point(data = sites, aes(x = Lon, y = Lat), color = "white", size = 3, shape = 4) +
-  theme_bw() +
-  coord_equal() +
-  scale_fill_gradientn(colours = rev(rainbow(4)), breaks = c(140, 200, 280, 340)) +
-  theme(axis.title.x = element_text(size = 16),
-    axis.title.y = element_text(size = 16, angle = 90),
-    axis.text.x = element_text(size = 14),
-    axis.text.y = element_text(size = 14),
-    panel.grid.major = element_blank(),
-    panel.grid.minor = element_blank(),
-    legend.position = "right",
-    legend.key = element_blank()
-  )
-
-prec_plot$layers <- rev(prec_plot$layers)
-
-tmax_plot <-
-  borders +
-  geom_raster(data = tmax_df, aes(y = Latitude, x = Longitude, fill = MAP)) +
-  geom_point(data = sites, aes(x = Lon, y = Lat), color = "white", size = 3, shape = 4) +
-  theme_bw() +
-  coord_equal() +
-  scale_fill_gradientn(colours = rev(rainbow(4)), breaks = c(140, 200, 280, 340)) +
-  theme(axis.title.x = element_text(size = 16),
-    axis.title.y = element_text(size = 16, angle = 90),
-    axis.text.x = element_text(size = 14),
-    axis.text.y = element_text(size = 14),
-    panel.grid.major = element_blank(),
-    panel.grid.minor = element_blank(),
-    legend.position = "right",
-    legend.key = element_blank()
-  )
-
-tmax_plot$layers <- rev(tmax_plot$layers)
-
-length_plot <-
-  borders +
-  geom_raster(data = length_df, aes(y = Latitude, x = Longitude, fill = MAP)) +
-  geom_point(data = sites, aes(x = Lon, y = Lat), color = "white", size = 3, shape = 4) +
-  theme_bw() +
-  coord_equal() +
-  scale_fill_gradientn(colours = rev(rainbow(4)), breaks = c(140, 200, 280, 340)) +
-  theme(axis.title.x = element_text(size = 16),
-    axis.title.y = element_text(size = 16, angle = 90),
-    axis.text.x = element_text(size = 14),
-    axis.text.y = element_text(size = 14),
-    panel.grid.major = element_blank(),
-    panel.grid.minor = element_blank(),
-    legend.position = "right",
-    legend.key = element_blank()
-  )
-
-length_plot$layers <- rev(length_plot$layers)
-
-length_plot
-prec_plot
-tmax_plot
-
-```
