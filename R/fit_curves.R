@@ -5,6 +5,7 @@
 #' @param formula formula. Model formula.
 #' @param data data frame. Table containing variables in model formula.
 #' @param fitFUN call. Algorithm used for model.
+#' @param predict_formals character. Names of variables necessary for predict function. If NULL, function will attempt to retrieve them from formula.
 #' @param args_list named list. list of arguments to be passed to the function in fitFUN.
 #' @param separator character. Character that separates variable names, years and scenarios.
 #'
@@ -60,6 +61,7 @@
 fit_curves <- function(formula,
   data,
   fitFUN,
+  predict_formals = NULL,
   args_list = NULL,
   separator = '_'
   ) {
@@ -127,14 +129,18 @@ fit_curves <- function(formula,
 
     if (any(class(x) == 'gamm')) x <- x$gam
 
-    args_names <-
+    if (is.null(predict_formals)) {
+    predict_formals <-
       x$formula %>%
       all.vars() %>%
       `[`(-1)
+    }
 
-    args_list <- vector("list", length(args_names))
+    if (is.null(predict_formals)) stop("Please input `predict_formals`")
 
-    names(args_list) <- args_names
+    predict_formals_list <- vector("list", length(predict_formals))
+
+    names(predict_formals_list) <- predict_formals
 
     TPC_function <- function() {
 
@@ -146,7 +152,7 @@ fit_curves <- function(formula,
 
     } # close TPC function
 
-    formals(TPC_function) <- args_list
+    formals(TPC_function) <- predict_formals_list
 
     TPC_function
 

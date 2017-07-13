@@ -238,10 +238,11 @@ Now, let's say the most crucial period for *Fulanus* population dynamics is thei
 
 # Let's try first with a binomial glm that we are going to fit for the dataset `FulanusBreeding` that contains a binary variable indicating if Fulanus was breeding at each month, as well as corresponding climate data
 
-Phen_model <- fit_curves(formula = breeding ~ prec,
+Phen_model <- fit_curves(formula = breeding + 0.0001 ~ SSlogis(log(prec), Asym, xmid, scal),
+  predict_formals = "prec",
   data = FulanusBreeding, 
-  fitFUN = glm, 
-  args_list = list(family = binomial(link = 'logit')))
+  fitFUN = nls
+ )
 
 PhenFUN1 <- Phen_model$model_1$predict
 
@@ -253,10 +254,8 @@ Seasons_by_rain <-
 
 # a new `season_length` layer will be created, with the duration of the season.
 
-raster::plot(Seasons_by_rain$present$season_length)
-raster::plot(Seasons_by_rain$present$tmax_breeding_mean)
-
-beepr::beep(4)
+raster::plot(Seasons_by_rain$phen_breeding_mean)
+raster::plot(Seasons_by_rain$prec_breeding_mean)
 ```
 
 ```{r, fig.height = 6, fig.width = 6}
