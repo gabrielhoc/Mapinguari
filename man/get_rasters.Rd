@@ -7,10 +7,9 @@
 get_rasters(raster_source = NULL, ext = c(-180, 180, -60, 90), margin = 0,
   resolution = 10, non_fixed_var = NULL, fixed_var = NULL,
   years = "present", scenarios = NULL, baseline = "present",
-  separator = "_", projection_model = "MP", download_var = NULL,
-  seasons = NULL, reorder = FALSE, seasons_args = NULL,
-  summary_args = NULL, summaryFUN = NULL, download_source = "pkg-raster",
-  alert = NULL)
+  separator = "_", projection_model = "MP", seasons = NULL,
+  reorder = FALSE, seasons_args = NULL, summary_args = NULL,
+  summaryFUN = NULL, download_source = "pkg-raster", alert = NULL)
 }
 \arguments{
 \item{raster_source}{character or list of RasterStack. You can either input a path to a folder with the required rasters or a list of RasterStack organized by year/scenario.}
@@ -34,8 +33,6 @@ get_rasters(raster_source = NULL, ext = c(-180, 180, -60, 90), margin = 0,
 \item{separator}{character. Character that separates variable names, years and scenarios.}
 
 \item{projection_model}{character. Projection model for future variables. Must be any model accepted in \code{raster::getData}}
-
-\item{download_var}{character vector. Which of the supplied variables should be downloaded?}
 
 \item{seasons}{numerical vector or function. Months at the beggining and end of phenological events, or function relating phenological event to environmental conditions. If NULL, no summarizing is made (remains by month).}
 

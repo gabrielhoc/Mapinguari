@@ -19,7 +19,7 @@ vignette: >
 
 The package is currently hosted on GitHub, this is how to install and load it, as well as how to access this manual:
 
-```{r}
+```{r, eval = FALSE}
 # You need package devtools to install packages from GitHub
 library(devtools)
 
@@ -35,6 +35,8 @@ Next, we are going to give an example of how to use the package, using some simu
 *Fulanus beltranus* is a fictional species of lizard from Democratic Republic of Congo. We would like to find out how this species is going to do in different climate change scenarios. First let's look at the points where it is currently known to occurr. To access the table with distribution data `FulanusDistribution`, package Mapinguari has to be loaded. Here we use ggmap to plot the points over a image from Google Maps (copyright Google).
 
 ```{r, message = FALSE, warning = FALSE, fig.height = 6, fig.width = 6}
+library(Mapinguari)
+
 # Load ggmap and ggplot2 to make the map
 library(ggmap)
 library(ggplot2)
@@ -166,32 +168,41 @@ The predictor function can be combined with the output from `get_rasters` to cre
 
 `transform_rasters` does the link between your physiological model and your spatial environmental data. It will apply any function to each year/scenario combination, as long as the variables necessary for the model are present. The predictor function is inputed on argument `transformFUN`. It doesn't have to be a function made by `fit_curves` necesesarily, any vectorized function should work (hopefully). Sometimes you might name variables differently on your model and on your rasters, or you want flexibility to input different rasters forthe same model argument (for example, for temperature in a TPC, you might want to use either minimum or maximum temperatures). To deal with these situations, the argument `transformFUN_args` acts as a dictionary. It is a named list, in which the names are the variables in the model and the arguments are character strings of the variables in the rasters. You might also supply a numerical constant instead of a character string. That way, this variable will be set to that value for all calculations. That might be useful for example, if your model contain individual covariates such as body size, and you want to set a standard value for every calculation, for example, average body size. The name of the resulting layers can be specified by inputing a named list on argument `transformFUN`, so each predictor function will be associated with a name.
 
+Note, however, that the variables on the rasters used have to be on the same scale as the data you used to fit the models. In this case, the raster temperatures are multiplied by 10, so we have to fix that first.
+
 ```{r, message = FALSE, warning = FALSE, fig.height = 6, fig.width = 6}
+
+# Let's scale the tmin and tmax layers
+FulanusEcoRasters_present_temps <- FulanusEcoRasters_present$present[[13:36]]/10
+
 # You can calculate the performance for minimum and maximum temperatures, by changing the correspondence in ` transformFUN_args`
 
 Perf_rasters_tmax <-
-  transform_rasters(raster_stack = FulanusEcoRasters_present[[1]],
+  transform_rasters(raster_stack = FulanusEcoRasters_present_temps,
     transformFUN = list(perf = my_tpc),
     transformFUN_args = list(temp = 'tmax', size = mean(FulanusPhysiology$size)))
 
 Perf_rasters_tmin <-
-  transform_rasters(raster_stack = FulanusEcoRasters_present[[1]],
+  transform_rasters(raster_stack = FulanusEcoRasters_present_temps,
     transformFUN = list(perf = my_tpc),
     transformFUN_args = list(temp = 'tmin', size = mean(FulanusPhysiology$size)))
 
 raster::plot(Perf_rasters_tmax[[1]][[1]])
+raster::plot(Perf_rasters_tmin[[1]][[1]])
 ```
 
 The function operates in RasterStacks, if you want to apply it to a list, you can use `lapply`:
 
-```{r}
-Perf_rasters_list <- lapply(FulanusEcoRasters_future, transform_rasters,
+```{r, eval = FALSE}
+FulanusEcoRasters_future_temps <- lapply(FulanusEcoRasters_future, function(x) x[[13:36]]/10)
+
+Perf_rasters_list <- lapply(FulanusEcoRasters_future_temps, transform_rasters,
   transformFUN = list(perf = my_tpc),
   transformFUN_args = list(temp = 'tmax', size = mean(FulanusPhysiology$size))
 )
 ```
 
-Function `transform_rasters` is computationally intensive, but it can be parallelized. Another way to reduce the amount of time needed is to reduce the number of rasters in the calculation. So far we have been applying `transform_rasters` to RasterStacks with 12 layers for each variable, one for each month. If you are interested, for example, in the average year performance, it is more efficient to average all 12 month layers and then apply `transform_rasters` to the resulting average layer, which can be done with function `summarize_rasters`
+Function `transform_rasters` is computationally intensive, one way to reduce the amount of time needed is to reduce the number of rasters in the calculation. So far we have been applying `transform_rasters` to RasterStacks with 12 layers for each variable, one for each month. If you are interested, for example, in the average year performance, it is more efficient to average all 12 month layers and then apply `transform_rasters` to the resulting average layer, which can be done with function `summarize_rasters`
 
 #summarize_rasters
 
@@ -199,52 +210,63 @@ Function `summarize_rasters` allows us to not only average, but also calculate s
 
 ```{r}
 Fulanus_present_year_summaries <-
-   summarize_rasters(Fulanus_Ecorasters_present[[1]],
+   summarize_rasters(FulanusEcoRasters_present[[1]],
     seasons = list(year = c(1:12)),
     summaryFUN = list(tmax = c("mean", "sd"), tmin = c("mean", "sd"), prec = "sum"))
 
 # Like `transform_rasters`, you can apply `summarize_rasters` over a list using lapply
-Fulanus_present_year_summaries <-   
-lapply(Fulanus_Ecorasters_future, summarize_rasters,
+Fulanus_present_year_summaries_list <-   
+lapply(FulanusEcoRasters_future, summarize_rasters,
     seasons = list(year = c(1:12)),
     summaryFUN = list(tmax = c("mean", "sd"), tmin = c("mean", "sd"), prec = "sum"))
 
-Fulanus_present_year_summaries <-
-   summarize_rasters(Fulanus_Ecorasters_present[[1]],
+# You can also specify multiple seasons
+
+Fulanus_present_two_seasons_summaries <-
+   summarize_rasters(FulanusEcoRasters_present[[1]],
     seasons = list(breeding = c(3:6), growing = c(8:11)),
     summaryFUN = list(tmax = c("mean", "sd"), tmin = c("mean", "sd"), prec = "sum"))
+
+raster::plot(Fulanus_present_year_summaries$prec_year_sum)
+raster::plot(Fulanus_present_two_seasons_summaries$prec_breeding_sum)
+raster::plot(Fulanus_present_two_seasons_summaries$prec_growing_sum)
 ```
 
 Now, let's say the most crucial period for *Fulanus* population dynamics is their breeding period and they wil breed only under certain climatic conditions. This might cause their breeding period to vary spatially and temporally. In order to account for that, function `summarize_rasters` can take other functions in argument `seasons`, which will take the environmental surfaces supplied as arguments and decide based on the values for each pixel in each raster if it is included in that season or not. This allows spatial variation in the seasons. `summarize_rasters` also has a `season_args` argument, which works as translation between function arguments and raster names, in the same way as `transformFUN_args` described above
 
 ```{r, message = FALSE, warning = FALSE, fig.height = 6, fig.width = 6}
 
-# Let's try first with a logistic function
-# Fix this later: simulate data on breeding seasons and environmental conditions, then fit this model
+# Let's try first with a binomial glm that we are going to fit for the dataset `FulanusBreeding` that contains a binary variable indicating if Fulanus was breeding at each month, as well as corresponding climate data
 
-PhenFUN1 <- function(x) round(1/(1 + exp((150 - x)/2)), 2)
+Phen_model <- fit_curves(formula = breeding ~ prec,
+  data = FulanusBreeding, 
+  fitFUN = glm, 
+  args_list = list(family = binomial(link = 'logit')))
+
+PhenFUN1 <- Phen_model$model_1$predict
 
 Seasons_by_rain <-
-    lapply(FulanusEcoRasters_future, summarize_rasters,
+    summarize_rasters(FulanusEcoRasters_present$present,
       seasons = list(breeding = PhenFUN1),
-      seasons_args = list(x = 'prec'),
+      seasons_args = list(prec = 'prec'),
       summaryFUN = "mean")
 
 # a new `season_length` layer will be created, with the duration of the season.
 
 raster::plot(Seasons_by_rain$present$season_length)
 raster::plot(Seasons_by_rain$present$tmax_breeding_mean)
+
+beepr::beep(4)
 ```
 
-```{r, fig.height = 6, fig.width = 6, eval = FALSE}
+```{r, fig.height = 6, fig.width = 6}
 
 # The function can also be a condition. Let's say we are only interested on the periods when performance is bigger than 80.
 
 PhenFUN2 <- function(x) ifelse(x > 80, 1, 0)
 
 Seasons_by_performance <-
-  lapply(Perf_rasters_tmax, 
-    summarize_rasters,
+ summarize_rasters(Perf_rasters_tmax,
     seasons = list(breeding = PhenFUN2) ,
     season_args = list(x = 'perf'))
 
@@ -255,11 +277,33 @@ raster::plot(Seasons_by_performance$present$perf_breeding)
 
 We haven't input anything on `summaryFUN`! If that happens, the function will return the result of the function in `seasons` for each month, in our case, it will show the areas that allow breeding for every month. What the function does is generate these rasters, multiplies then by the corresponding rasters for the other variables in that month, then applies the function in `summaryFUN`. While that might be work well with some functions, like `sum`, it does not make sense to do it with `mean`, since the proportion resulted from the function in `seasons` is not accounted for in the operation. For us to get an accurate average, given spatial variation in season, we would need a `weighted.mean`. That is a summary function that needs additional arguments, the weights. To input additional arguments for summary functions, we use argument `summaryFUN_args`
 
-Note that the season by performance maps have blank spots both in the Season and NonSeason rasters, while the season by rain maps have blank spots only on the Season raster. Why is that? Let's look at the values for the season length at the present for both the `Seasons_by_rain` and `Seasons_by_performance`.
+```{r, fig.height = 6, fig.width = 6}
 
-```{r}
-Seasons_by_rain$present$season_length
-Seasons_by_performance$present$season_length
+Seasons_by_performance <-
+ summarize_rasters(Perf_rasters_tmax,
+    seasons = list(breeding = PhenFUN2) ,
+    season_args = list(x = 'perf'), 
+   summaryFUN = "weighted.mean", 
+   summary_args = "season_length")
+
+raster::plot(Seasons_by_performance$present$season_length)
+raster::plot(Seasons_by_performance$present$perf_breeding)
+
 ```
 
-You can see that the season by rain raster ranges from 0 to 9, that means that the species is unable to breed in some places, and the places where it breeds for longer, the breeding season lasts 9 months. While the season by performance raster ranges from 0 to 12, that means there are places where the species can't breed and places where the species can breed all year long. That shows on the map as the blank spots. If the values are 0 on the Season raster, it means the species can't breed in that location, if they are 0 in the NonSeason raster, it means they breed all year long in that location.
+Note that the season by performance maps have blank spots both in the Season and NonSeason rasters, while the season by rain maps have blank spots only on the Season raster. Why is that? Let's look at the values for the season length at the present for both the `Seasons_by_rain` and `Seasons_by_performance`.
+
+# An integrative example, calculating hours of activity
+
+Coming soon.
+
+Steps:
+-Use `transform_rasters` to calculate EVI (Find EVI equation, if can't find it, use NDVI instead);
+-Get EVI values for the coordinates of the locations in the table `FulanusMicroclimate` and add values to the table;
+-Use `fit_curves` to make a model like `HA ~ temp + EVI` from `FulanusMicroclimate`;
+-Use `transform_rasters` again to extrapolate HA.
+
+
+```{r}
+
+```

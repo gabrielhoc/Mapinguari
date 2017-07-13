@@ -23,4 +23,4 @@
 #'   \item{day}{weight of the diamond, in carats}
 #'   ...
 #' }
-"FulanusMicrohabitat"
+"FulanusMicroclimate"

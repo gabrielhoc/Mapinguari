@@ -4,7 +4,7 @@
 \alias{fit_curves}
 \title{Creates functions relating environment to physiology.}
 \usage{
-fit_curves(formula, data, fitFUN, args_list, separator = "_")
+fit_curves(formula, data, fitFUN, args_list = NULL, separator = "_")
 }
 \arguments{
 \item{formula}{formula. Model formula.}

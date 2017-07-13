@@ -5,7 +5,7 @@
 \title{Groups rasters by duration of phenological event.}
 \usage{
 summarize_rasters(raster_stack, seasons = list(year = c(1:12)),
-  seasons_args = NULL, summaryFUN = c(mean), summary_args = NULL,
+  seasons_args = NULL, summaryFUN = "mean", summary_args = NULL,
   separator = "_", time_res = 12)
 }
 \arguments{

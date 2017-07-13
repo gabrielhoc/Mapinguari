@@ -60,7 +60,7 @@
 fit_curves <- function(formula,
   data,
   fitFUN,
-  args_list,
+  args_list = NULL,
   separator = '_'
   ) {
 
@@ -138,20 +138,11 @@ fit_curves <- function(formula,
 
     TPC_function <- function() {
 
-      input <- as.list(match.call())[-1]
+      args_mat <- do.call(data.frame, as.list(environment()))
 
-      frmls <- formals()
+      output_list <- plyr::alply(args_mat, 1, function(y) stats::predict(x, y))
 
-      all_args_list <-
-        `!`(names(frmls) %in% names(input)) %>%
-        `[`(frmls, .) %>%
-        append(input, .) %>%
-        lapply(eval)
-
-      args_mat <- do.call(data.frame, all_args_list)
-
-      plyr::alply(args_mat, 1, function(y) stats::predict(x, y)) %>%
-        unlist()
+      unlist(output_list)
 
     } # close TPC function
 

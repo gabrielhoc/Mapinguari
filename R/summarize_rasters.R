@@ -49,7 +49,7 @@
 summarize_rasters <- function(raster_stack,
   seasons = list(year = c(1:12)),
   seasons_args = NULL,
-  summaryFUN = c(mean),
+  summaryFUN = "mean",
   summary_args = NULL,
   separator = '_',
   time_res = 12) {
@@ -93,31 +93,31 @@ summarize_rasters <- function(raster_stack,
 
   names(fixed_list) <- fixed_names
 
-  seasons_mod <- lapply(seasons, function(x){
+  seasons_mod <- lapply(seasons, function(y){
 
-    if (class(x) == 'numeric' | class(x) == 'integer') {
+    if (class(y) == 'numeric' | class(y) == 'integer') {
 
-      x
+      y
 
-    } else if (class(x) == 'function') {
+    } else if (class(y) == 'function') {
 
-      pred_raster <-
-        seasons_args %in% split_vars %>%
-        which() %>%
-        `[[`(seasons_args, .)
+#      pred_raster <-
+#        seasons_args %in% split_vars %>%
+      #   which() %>%
+      #   `[[`(seasons_args, .)
+      #
+      # vars_only <-
+      #   raster_stack[[which(unlist(split_vars) == pred_raster)]]
+      #
+      # ncores <- parallel::detectCores() - 1
+      # raster::beginCluster(ncores, type = 'SOCK')
+      #
+      # Phen_rasters <- raster::clusterR(vars_only, raster::overlay, args = list(fun = y))
+      #
+      # raster::endCluster()
+      #
 
-      formals(seasons)  <- seasons_args
-
-      vars_only <-
-        raster_stack[[which(unlist(split_vars) == pred_raster)]]
-
-      ncores <- parallel::detectCores() - 1
-      raster::beginCluster(ncores, type = 'SOCK')
-
-      Phen_rasters <- raster::clusterR(vars_only, raster::overlay, args = list(fun = seasons)) %>%
-        raster::stack()
-
-      raster::endCluster()
+      Phen_rasters <- transform_rasters(raster_stack = raster_stack, transformFUN = y, transformFUN_args = seasons_args, separator = separator, time_res = time_res)
 
       names(Phen_rasters) <- paste("phen", 1:time_res, sep = separator)
 
