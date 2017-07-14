@@ -5,8 +5,8 @@
 \title{Groups rasters by duration of phenological event.}
 \usage{
 summarize_rasters(raster_stack, seasons = list(year = c(1:12)),
-  seasons_args = NULL, summaryFUN = "mean", summary_args = NULL,
-  separator = "_", time_res = 12)
+  summaryFUN = "mean", summary_args = NULL, separator = "_",
+  time_res = 12)
 }
 \arguments{
 \item{raster_stack}{RasterStack.}
@@ -20,8 +20,6 @@ summarize_rasters(raster_stack, seasons = list(year = c(1:12)),
 \item{separator}{character. Character that separates variable names, years and scenarios.}
 
 \item{time_res}{integer. How many layers do time varying variables have? Default is 12, as in 12 months in a year, the time resolution in WorldClim.}
-
-\item{season_args}{named list. Correspondence between 'seasons' arguments and raster names.}
 }
 \value{
 Returns a list of raster stacks for the variables required, organized by year/scenario combination.
@@ -52,14 +50,38 @@ Phenology_weighted_mean <-
     summary_args = list(w = c(0.5, rep(1, 4), 0.5))
   )
 
-PhenFUN <- function(x) 1/(1 + exp((150 - x)/2))
+Phen_model <- fit_curves(formula = breeding + 0.0001 ~ SSlogis(log(prec), Asym, xmid, scal),
+  predict_formals = "prec",
+  data = FulanusBreeding,
+  fitFUN = nls
+)
 
-Phenology_by_precFUN <-
-  lapply(Fulanus_Ecorasters_download, summarize_rasters,
-    seasons = list(rainy_season = PhenFUN),
-    seasons_args = list(x = 'prec'),
-    summaryFUN = "raster::weighted.mean",
-    summary_args = list(w = "rainy_season")
-  )
+PhenFUN1 <- Phen_model$model_1$predict
+
+season_rain_rasters <-
+  transform_rasters(raster_stack = FulanusEcoRasters_present$present,
+    transformFUN = list(season_rain = PhenFUN1),
+    transformFUN_args = list(prec = 'prec'))
+
+FulanusEcoRasters_season_rain <-
+  summarize_rasters(Perf_rasters_tmax,
+    seasons = list(year = c(1:12)),
+    summaryFUN = "weighted.mean",
+    summary_args = list(weights = season_rain_rasters))
+
+
+PhenFUN2 <- function(x) ifelse(x > 80, 1, 0)
+
+season_performance_rasters <-
+  transform_rasters(raster_stack = FulanusEcoRasters_present$present,
+    transformFUN = list(season_rain = PhenFUN2),
+    transformFUN_args = list(prec = 'prec'))
+
+FulanusEcoRasters_season_performance <-
+  summarize_rasters(FulanusEcoRasters_present$present[[1:12]],
+    seasons = list(year = c(1:12)),
+    summaryFUN = "weighted.mean",
+    summary_args = list(weights = season_performance_rasters))
+
 
 }

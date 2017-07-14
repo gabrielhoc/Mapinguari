@@ -232,14 +232,16 @@ raster::plot(Fulanus_present_two_seasons_summaries$prec_breeding_sum)
 raster::plot(Fulanus_present_two_seasons_summaries$prec_growing_sum)
 ```
 
+# integrating transform_rasters and summarize_rasters: spatial variation in phenology
+
 Now, let's say the most crucial period for *Fulanus* population dynamics is their breeding period and they wil breed only under certain climatic conditions. This might cause their breeding period to vary spatially and temporally. In order to account for that, we can fit a logistic model of breeding status vs climate, using data from the table `FulanusBreeding`, which contain data on breeding status and climate at different localities. Then we can use this model to create binary rasters with the locations where Fulanus is breeding at each month, using function `transform_rasters`. After that, we can use the binary rasters as weights for a weighted mean calculated with `summarize_rasters`, and that should give us the mean of any raster during breeding season with spatial variation. Argument `summary_args` allow us to input extra arguments in the summary functions, including the weights needed
 
 ```{r, message = FALSE, warning = FALSE, fig.height = 6, fig.width = 6}
 
-Phen_model <- fit_curves(formula = breeding + 0.0001 ~ SSlogis(log(prec), Asym, xmid, scal),
-  predict_formals = "prec",
+Phen_model <- fit_curves(formula =  breeding ~ prec,
   data = FulanusBreeding, 
-  fitFUN = nls
+  fitFUN = glm,
+  args_list = list(family = binomial(link = 'logit'))
  )
 
 PhenFUN1 <- Phen_model$model_1$predict
@@ -249,11 +251,16 @@ season_rain_rasters <-
     transformFUN = list(season_rain = PhenFUN1),
     transformFUN_args = list(prec = 'prec'))
 
+# Let's convert the raster to binary
+
+season_rain_rasters_binary <-
+  raster::calc(season_rain_rasters, function(x) ifelse(x < 0.5, 0, 1))
+
 FulanusEcoRasters_season_rain <-
     summarize_rasters(Perf_rasters_tmax,
       seasons = list(year = c(1:12)),
       summaryFUN = "weighted.mean", 
-      summary_args = list(weights = season_rain_rasters))
+      summary_args = list(weights = season_rain_rasters_binary))
 
 # Length of Breeding season
 raster::plot(sum(season_rain_rasters))
@@ -286,9 +293,6 @@ raster::plot(sum(season_performance_rasters))
 raster::plot(FulanusEcoRasters_season_performance)
 
 ```
-
-
-Note that the season by performance maps have blank spots both in the Season and NonSeason rasters, while the season by rain maps have blank spots only on the Season raster. Why is that? Let's look at the values for the season length at the present for both the `Seasons_by_rain` and `Seasons_by_performance`.
 
 # An integrative example, calculating hours of activity
 

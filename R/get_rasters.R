@@ -16,14 +16,9 @@
 #' @param separator character. Character that separates variable names, years and scenarios.
 #' @param projection_model character. Projection model for future variables. Must be any model accepted in \code{raster::getData}
 #' @param reorder logical. If TRUE, will use last two characters of layer names in RasterStacks with 12 layers to order them in ascending order.
-#' @param seasons numerical vector or function. Months at the beggining and end of phenological events, or function relating phenological event to environmental conditions. If NULL, no summarizing is made (remains by month).
-#' @param seasons_args named list of strings. Correspondence between PhenFUN arguments and raster names.
-#' @param alert integer. Plays a sound alert when function is done running. See documentation of package beepr for description of sound options.
 #' @param reorder logical. If TRUE, reorders layers by last two characters in their names, after replacing letters for 0.
-#' @param summary_args named list. Additional arguments for summarizing function.
-#' @param summaryFUN function. Function used to summarize months inside seasons.
 #' @param download_source character. Where to download rasters from. Default is 'pkg-raster' which will get rasters from WorldClim, using package 'raster' functions.
-#' @param alert integer. If an integer is input, the functino will play a sound after it is finished. See package 'beepr' for correspondence between numbers and sounds.
+#' @param alert integer. Plays a sound alert when function is done running. See documentation of package beepr for description of sound options.
 #'
 #' @return Returns a list of raster stacks for the variables required, organized by year/scenario combination.
 #'
@@ -51,17 +46,6 @@
 #'     alert = 4)
 #'
 #'
-#' Fulanus_EcoRasters_Phenology_mean_sd <-
-#'   get_rasters(raster_source = Fulanus_Ecorasters_dir,
-#'     ext = FulanusDistribution,
-#'     margin = 5,
-#'     non_fixed_var = c('prec', 'tmin', 'tmax'),
-#'     years = c("present", '2050', '2070'),
-#'     scenarios = c('rcp26', 'rcp45', 'rcp85'),
-#'     seasons = list(breeding = c(3:8), non_breeding = c(9:12, 1, 2)),
-#'     summaryFUN = list(tmax = c("mean", "sd"), tmin = c("mean", "sd"), prec = "sum"))
-#'
-#'
 #' @export
 
 get_rasters <- function(raster_source = NULL,
@@ -75,11 +59,7 @@ get_rasters <- function(raster_source = NULL,
   baseline = "present",
   separator = '_',
   projection_model = 'MP',
-  seasons = NULL,
   reorder = FALSE,
-  seasons_args = NULL,
-  summary_args = NULL,
-  summaryFUN = NULL,
   download_source = 'pkg-raster',
   alert = NULL
 ) {
@@ -233,18 +213,6 @@ get_rasters <- function(raster_source = NULL,
 
     } # close function
     ) # close lapply
-
-  # Insert derive here
-
-  if (!is.null(seasons)) {
-
-    final_list <- lapply(final_list, summarize_rasters,
-      seasons_args = seasons_args,
-      summaryFUN = summaryFUN,
-      summary_args = summary_args,
-      separator = separator,
-      seasons = seasons)
-  }
 
   if (!is.null(alert)) {beepr::beep(alert)}
 

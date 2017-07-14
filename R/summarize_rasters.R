@@ -8,6 +8,7 @@
 #' @param summary_args named list. Additional arguments for summarizing function.
 #' @param separator character. Character that separates variable names, years and scenarios.
 #' @param time_res integer. How many layers do time varying variables have? Default is 12, as in 12 months in a year, the time resolution in WorldClim.
+#' @param alert integer. Plays a sound alert when function is done running. See documentation of package beepr for description of sound options.
 #'
 #' @return Returns a list of raster stacks for the variables required, organized by year/scenario combination.
 #'
@@ -74,7 +75,8 @@ summarize_rasters <- function(raster_stack,
   summaryFUN = "mean",
   summary_args = NULL,
   separator = '_',
-  time_res = 12) {
+  time_res = 12,
+  alert = NULL) {
 
   # split stack by variable
 
@@ -264,6 +266,8 @@ summarize_rasters <- function(raster_stack,
   summarized_stack <- raster::stack(summarized_rasters)
 
   final_stack <- raster::stack(summarized_stack, fixed_list)
+
+  if (!is.null(alert)) {beepr::beep(alert)}
 
   return(final_stack)
 

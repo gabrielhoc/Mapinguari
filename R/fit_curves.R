@@ -146,7 +146,7 @@ fit_curves <- function(formula,
 
       args_mat <- do.call(data.frame, as.list(environment()))
 
-      output_list <- plyr::alply(args_mat, 1, function(y) stats::predict(x, y))
+      output_list <- plyr::alply(args_mat, 1, function(y) stats::predict(x, y, type = 'response'))
 
       unlist(output_list)
 
