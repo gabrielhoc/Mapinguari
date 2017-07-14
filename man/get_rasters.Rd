@@ -7,9 +7,8 @@
 get_rasters(raster_source = NULL, ext = c(-180, 180, -60, 90), margin = 0,
   resolution = 10, non_fixed_var = NULL, fixed_var = NULL,
   years = "present", scenarios = NULL, baseline = "present",
-  separator = "_", projection_model = "MP", seasons = NULL,
-  reorder = FALSE, seasons_args = NULL, summary_args = NULL,
-  summaryFUN = NULL, download_source = "pkg-raster", alert = NULL)
+  separator = "_", projection_model = "MP", reorder = FALSE,
+  download_source = "pkg-raster", alert = NULL)
 }
 \arguments{
 \item{raster_source}{character or list of RasterStack. You can either input a path to a folder with the required rasters or a list of RasterStack organized by year/scenario.}
@@ -34,23 +33,13 @@ get_rasters(raster_source = NULL, ext = c(-180, 180, -60, 90), margin = 0,
 
 \item{projection_model}{character. Projection model for future variables. Must be any model accepted in \code{raster::getData}}
 
-\item{seasons}{numerical vector or function. Months at the beggining and end of phenological events, or function relating phenological event to environmental conditions. If NULL, no summarizing is made (remains by month).}
-
 \item{reorder}{logical. If TRUE, will use last two characters of layer names in RasterStacks with 12 layers to order them in ascending order.}
-
-\item{seasons_args}{named list of strings. Correspondence between PhenFUN arguments and raster names.}
-
-\item{summary_args}{named list. Additional arguments for summarizing function.}
-
-\item{summaryFUN}{function. Function used to summarize months inside seasons.}
 
 \item{download_source}{character. Where to download rasters from. Default is 'pkg-raster' which will get rasters from WorldClim, using package 'raster' functions.}
 
 \item{alert}{integer. Plays a sound alert when function is done running. See documentation of package beepr for description of sound options.}
 
 \item{reorder}{logical. If TRUE, reorders layers by last two characters in their names, after replacing letters for 0.}
-
-\item{alert}{integer. If an integer is input, the functino will play a sound after it is finished. See package 'beepr' for correspondence between numbers and sounds.}
 }
 \value{
 Returns a list of raster stacks for the variables required, organized by year/scenario combination.
@@ -80,17 +69,6 @@ Fulanus_Ecorasters_dir <-
     scenarios = c('rcp26', 'rcp45', 'rcp85'),
     reorder = TRUE,
     alert = 4)
-
-
-Fulanus_EcoRasters_Phenology_mean_sd <-
-  get_rasters(raster_source = Fulanus_Ecorasters_dir,
-    ext = FulanusDistribution,
-    margin = 5,
-    non_fixed_var = c('prec', 'tmin', 'tmax'),
-    years = c("present", '2050', '2070'),
-    scenarios = c('rcp26', 'rcp45', 'rcp85'),
-    seasons = list(breeding = c(3:8), non_breeding = c(9:12, 1, 2)),
-    summaryFUN = list(tmax = c("mean", "sd"), tmin = c("mean", "sd"), prec = "sum"))
 
 
 }

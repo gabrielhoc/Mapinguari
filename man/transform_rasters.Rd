@@ -5,7 +5,7 @@
 \title{Transform environmental rasters in ecophysiological rasters.}
 \usage{
 transform_rasters(raster_stack, transformFUN, transformFUN_args,
-  separator = "_", time_res = 12)
+  separator = "_", time_res = 12, alert = NULL)
 }
 \arguments{
 \item{raster_stack}{character or list of RasterStack. You can either input a path to a folder with the required rasters or a list of RasterStack organized by year/scenario.}
@@ -17,6 +17,8 @@ transform_rasters(raster_stack, transformFUN, transformFUN_args,
 \item{separator}{character. Character that separates variable names, years and scenarios.}
 
 \item{time_res}{How many layers do time varying variables have? Default is 12, as in 12 months in a year, the time resolution in WorldClim.}
+
+\item{alert}{integer. Plays a sound alert when function is done running. See documentation of package beepr for description of sound options.}
 }
 \value{
 Returns a list of raster stacks for the variables required, organized by year/scenario combination.

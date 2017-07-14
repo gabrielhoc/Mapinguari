@@ -141,16 +141,21 @@ transform_rasters <- function(raster_stack,
   raster_by_arg_by_rep <-
     lapply(raster_by_arg, function(x){
 
-      repeated_names <- 1:raster::nlayers(x)
+      repeated_names <- lapply(strsplit(names(x), separator), function(y){
 
-      repeated_list <- raster::unstack(x)
+        paste(y[-1], collapse = separator)
+
+      }
+      )
+
+      repeated_list <- ifelse(class(x) == 'RasterStack', raster::unstack(x), list(x))
 
       names(repeated_list) <- repeated_names
 
       repeated_list
 
-    } # close function
-    ) # close lapply
+    }
+    )
 
   reversed_list <-
     raster_by_arg_by_rep %>%

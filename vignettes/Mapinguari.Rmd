@@ -111,6 +111,37 @@ FulanusEcoRasters_future <-
 raster::plot(FulanusEcoRasters_future$`2050_rcp26`)
 ```
 
+As you can see, we have multiple rasters for each variable, one for each month. When doing biogeographical analysis, such as species distribution models, we are generally need a single raster for each variable, such as the annual average or total. Function `summarize_rasters` allows us to summarize time-varying rasters accross the year or parts of the year.
+
+#summarize_rasters
+
+Function `summarize_rasters` allows us to not only average, but also calculate standard deviations, totals, variance or any other summary function for the month layers. The argument `seasons` allows you to specify the months to be summarized. In this case, since we are interested in the whole year, but we can set `seasons` to a part of the year, or to multiple parts. Argument `summaryFUN` is where we specify the functions to be used for the summaries, and we can use a single function or specify multiple functions for different variables.
+
+```{r, fig.height = 6, fig.width = 6}
+Fulanus_present_year_summaries <-
+   summarize_rasters(FulanusEcoRasters_present[[1]],
+    seasons = list(year = c(1:12)),
+    summaryFUN = list(tmax = c("mean", "sd"), tmin = c("mean", "sd"), prec = "sum"))
+
+# The function operates in RasterStacks, if you want to apply it to a list, you can use `lapply`:
+
+Fulanus_present_year_summaries_list <-   
+lapply(FulanusEcoRasters_future, summarize_rasters,
+    seasons = list(year = c(1:12)),
+    summaryFUN = list(tmax = c("mean", "sd"), tmin = c("mean", "sd"), prec = "sum"))
+
+# You can also specify multiple seasons
+
+Fulanus_present_two_seasons_summaries <-
+   summarize_rasters(FulanusEcoRasters_present[[1]],
+    seasons = list(breeding = c(3:6), growing = c(8:11)),
+    summaryFUN = list(tmax = c("mean", "sd"), tmin = c("mean", "sd"), prec = "sum"))
+
+raster::plot(Fulanus_present_year_summaries$prec_year_sum)
+raster::plot(Fulanus_present_two_seasons_summaries$prec_breeding_sum)
+raster::plot(Fulanus_present_two_seasons_summaries$prec_growing_sum)
+```
+
 Now that we have information on the climate where the species live, let's get some information on the species physiology.
 
 # function fit_curves
@@ -162,18 +193,18 @@ my_tpc(temp = 20, size = 3)
 my_tpc(temp = 20:40, size = 3)
 ```
 
-The predictor function can be combined with the output from `get_rasters` to create a raster of physiology, which varies according to local environmental conditions. This is the subject of the next function, `trasform_rasters`.
+The predictor function can be combined with the output from `get_rasters` or `summarize_rasters` to create a raster of physiology, which varies according to local environmental conditions. This is the subject of the next function, `trasform_rasters`. It is generally more efficient to apply `summarize_rasters` first, so the number of layers being estimated with `transform_rasters` is smaller, because this calculations can be very computationally intensive.
 
 # transform_rasters
 
-`transform_rasters` does the link between your physiological model and your spatial environmental data. It will apply any function to each year/scenario combination, as long as the variables necessary for the model are present. The predictor function is inputed on argument `transformFUN`. It doesn't have to be a function made by `fit_curves` necesesarily, any vectorized function should work (hopefully). Sometimes you might name variables differently on your model and on your rasters, or you want flexibility to input different rasters forthe same model argument (for example, for temperature in a TPC, you might want to use either minimum or maximum temperatures). To deal with these situations, the argument `transformFUN_args` acts as a dictionary. It is a named list, in which the names are the variables in the model and the arguments are character strings of the variables in the rasters. You might also supply a numerical constant instead of a character string. That way, this variable will be set to that value for all calculations. That might be useful for example, if your model contain individual covariates such as body size, and you want to set a standard value for every calculation, for example, average body size. The name of the resulting layers can be specified by inputing a named list on argument `transformFUN`, so each predictor function will be associated with a name.
+`transform_rasters` does the link between your physiological model and your spatial environmental data. It will apply any function to each year/scenario combination, as long as the variables necessary for the model are present. The predictor function is inputed on argument `transformFUN`. It doesn't have to be a function made by `fit_curves` necesesarily, any vectorized function should work. Sometimes you might name variables differently on your model and on your rasters, or you want flexibility to input different rasters forthe same model argument (for example, for temperature in a TPC, you might want to use either minimum or maximum temperatures). To deal with these situations, the argument `transformFUN_args` acts as a dictionary. It is a named list, in which the names are the variables in the model and the arguments are character strings of the variables in the rasters. You might also supply a numerical constant instead of a character string. That way, this variable will be set to that value for all calculations. That might be useful for example, if your model contain individual covariates such as body size, and you want to set a standard value for every calculation, for example, average body size. The name of the resulting layers can be specified by inputing a named list on argument `transformFUN`, so each predictor function will be associated with a name.
 
 Note, however, that the variables on the rasters used have to be on the same scale as the data you used to fit the models. In this case, the raster temperatures are multiplied by 10, so we have to fix that first.
 
 ```{r, message = FALSE, warning = FALSE, fig.height = 6, fig.width = 6}
 
-# Let's scale the tmin and tmax layers
-FulanusEcoRasters_present_temps <- FulanusEcoRasters_present$present[[13:36]]/10
+# Let's scale the tmin and tmax average layers
+FulanusEcoRasters_present_temps <- Fulanus_present_year_summaries[[c(2,4)]]/10
 
 # You can calculate the performance for minimum and maximum temperatures, by changing the correspondence in ` transformFUN_args`
 
@@ -200,36 +231,6 @@ Perf_rasters_list <- lapply(FulanusEcoRasters_future_temps, transform_rasters,
   transformFUN = list(perf = my_tpc),
   transformFUN_args = list(temp = 'tmax', size = mean(FulanusPhysiology$size))
 )
-```
-
-Function `transform_rasters` is computationally intensive, one way to reduce the amount of time needed is to reduce the number of rasters in the calculation. So far we have been applying `transform_rasters` to RasterStacks with 12 layers for each variable, one for each month. If you are interested, for example, in the average year performance, it is more efficient to average all 12 month layers and then apply `transform_rasters` to the resulting average layer, which can be done with function `summarize_rasters`
-
-#summarize_rasters
-
-Function `summarize_rasters` allows us to not only average, but also calculate standard deviations, totals, variance or any other summary function for the month layers. The argument `seasons` allows you to specify the months to be summarized. In this case, since we are interested in the whole year, but we can set `seasons` to a part of the year, or to multiple parts.
-
-```{r, fig.height = 6, fig.width = 6}
-Fulanus_present_year_summaries <-
-   summarize_rasters(FulanusEcoRasters_present[[1]],
-    seasons = list(year = c(1:12)),
-    summaryFUN = list(tmax = c("mean", "sd"), tmin = c("mean", "sd"), prec = "sum"))
-
-# Like `transform_rasters`, you can apply `summarize_rasters` over a list using lapply
-Fulanus_present_year_summaries_list <-   
-lapply(FulanusEcoRasters_future, summarize_rasters,
-    seasons = list(year = c(1:12)),
-    summaryFUN = list(tmax = c("mean", "sd"), tmin = c("mean", "sd"), prec = "sum"))
-
-# You can also specify multiple seasons
-
-Fulanus_present_two_seasons_summaries <-
-   summarize_rasters(FulanusEcoRasters_present[[1]],
-    seasons = list(breeding = c(3:6), growing = c(8:11)),
-    summaryFUN = list(tmax = c("mean", "sd"), tmin = c("mean", "sd"), prec = "sum"))
-
-raster::plot(Fulanus_present_year_summaries$prec_year_sum)
-raster::plot(Fulanus_present_two_seasons_summaries$prec_breeding_sum)
-raster::plot(Fulanus_present_two_seasons_summaries$prec_growing_sum)
 ```
 
 # integrating transform_rasters and summarize_rasters: spatial variation in phenology
@@ -299,7 +300,7 @@ raster::plot(FulanusEcoRasters_season_performance)
 Coming soon.
 
 Steps:
-- get EVI or NDVI rasters
+-get EVI or NDVI rasters
 -Get EVI values for the coordinates of the locations in the table `FulanusMicroclimate` and add values to the table;
 -Use `fit_curves` to make a model like `HA ~ temp + EVI` from `FulanusMicroclimate`;
 -Use `transform_rasters` again to extrapolate HA.
