@@ -4,7 +4,8 @@
 \alias{fit_curves}
 \title{Creates functions relating environment to physiology.}
 \usage{
-fit_curves(formula, data, fitFUN, args_list = NULL, separator = "_")
+fit_curves(formula, data, fitFUN, predict_formals = NULL, args_list = NULL,
+  separator = "_")
 }
 \arguments{
 \item{formula}{formula. Model formula.}
@@ -12,6 +13,8 @@ fit_curves(formula, data, fitFUN, args_list = NULL, separator = "_")
 \item{data}{data frame. Table containing variables in model formula.}
 
 \item{fitFUN}{call. Algorithm used for model.}
+
+\item{predict_formals}{character. Names of variables necessary for predict function. If NULL, function will attempt to retrieve them from formula.}
 
 \item{args_list}{named list. list of arguments to be passed to the function in fitFUN.}
 
