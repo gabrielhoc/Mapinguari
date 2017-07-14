@@ -148,7 +148,11 @@ transform_rasters <- function(raster_stack,
       }
       )
 
-      repeated_list <- ifelse(class(x) == 'RasterStack', raster::unstack(x), list(x))
+      if (class(x) == 'RasterStack'){
+        repeated_list <- raster::unstack(x)
+      } else {
+        repeated_list <- list(x)
+      }
 
       names(repeated_list) <- repeated_names
 
