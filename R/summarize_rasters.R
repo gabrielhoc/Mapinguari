@@ -4,7 +4,6 @@
 #'
 #' @param raster_stack RasterStack.
 #' @param seasons numerical vector or function. Months at the beggining and end of phenological events, or function relating phenological event to environmental conditions. If NULL, no summarizing is made (remains by month).
-#' @param season_args named list. Correspondence between 'seasons' arguments and raster names.
 #' @param summaryFUN function. Function used to summarize months inside seasons.
 #' @param summary_args named list. Additional arguments for summarizing function.
 #' @param separator character. Character that separates variable names, years and scenarios.
@@ -35,20 +34,43 @@
 #'     summary_args = list(w = c(0.5, rep(1, 4), 0.5))
 #'   )
 #'
-#' PhenFUN <- function(x) 1/(1 + exp((150 - x)/2))
+#' Phen_model <- fit_curves(formula = breeding + 0.0001 ~ SSlogis(log(prec), Asym, xmid, scal),
+#'   predict_formals = "prec",
+#'   data = FulanusBreeding,
+#'   fitFUN = nls
+#' )
 #'
-#' Phenology_by_precFUN <-
-#'   lapply(Fulanus_Ecorasters_download, summarize_rasters,
-#'     seasons = list(rainy_season = PhenFUN),
-#'     seasons_args = list(x = 'prec'),
-#'     summaryFUN = "raster::weighted.mean",
-#'     summary_args = list(w = "rainy_season")
-#'   )
+#' PhenFUN1 <- Phen_model$model_1$predict
+#'
+#' season_rain_rasters <-
+#'   transform_rasters(raster_stack = FulanusEcoRasters_present$present,
+#'     transformFUN = list(season_rain = PhenFUN1),
+#'     transformFUN_args = list(prec = 'prec'))
+#'
+#' FulanusEcoRasters_season_rain <-
+#'   summarize_rasters(Perf_rasters_tmax,
+#'     seasons = list(year = c(1:12)),
+#'     summaryFUN = "weighted.mean",
+#'     summary_args = list(weights = season_rain_rasters))
+#'
+#'
+#' PhenFUN2 <- function(x) ifelse(x > 80, 1, 0)
+#'
+#' season_performance_rasters <-
+#'   transform_rasters(raster_stack = FulanusEcoRasters_present$present,
+#'     transformFUN = list(season_rain = PhenFUN2),
+#'     transformFUN_args = list(prec = 'prec'))
+#'
+#' FulanusEcoRasters_season_performance <-
+#'   summarize_rasters(FulanusEcoRasters_present$present[[1:12]],
+#'     seasons = list(year = c(1:12)),
+#'     summaryFUN = "weighted.mean",
+#'     summary_args = list(weights = season_performance_rasters))
+#'
 #'
 #' @export
 summarize_rasters <- function(raster_stack,
   seasons = list(year = c(1:12)),
-  seasons_args = NULL,
   summaryFUN = "mean",
   summary_args = NULL,
   separator = '_',
@@ -93,87 +115,29 @@ summarize_rasters <- function(raster_stack,
 
   names(fixed_list) <- fixed_names
 
-  seasons_mod <- lapply(seasons, function(y){
-
-    if (class(y) == 'numeric' | class(y) == 'integer') {
-
-      y
-
-    } else if (class(y) == 'function') {
-
-#      pred_raster <-
-#        seasons_args %in% split_vars %>%
-      #   which() %>%
-      #   `[[`(seasons_args, .)
-      #
-      # vars_only <-
-      #   raster_stack[[which(unlist(split_vars) == pred_raster)]]
-      #
-      # ncores <- parallel::detectCores() - 1
-      # raster::beginCluster(ncores, type = 'SOCK')
-      #
-      # Phen_rasters <- raster::clusterR(vars_only, raster::overlay, args = list(fun = y))
-      #
-      # raster::endCluster()
-      #
-
-      Phen_rasters <- transform_rasters(raster_stack = raster_stack, transformFUN = y, transformFUN_args = seasons_args, separator = separator, time_res = time_res)
-
-      names(Phen_rasters) <- paste("phen", 1:time_res, sep = separator)
-
-      Phen_rasters
-
-      }
-
-  }
-  )
-
   separated_rasters <-
     lapply(non_fixed_list, function(x){
-      lapply(seasons_mod, function(y){
+      lapply(seasons, function(y){
 
-        if (class(y) == 'integer' | class(y) == 'numeric') {
-
-          raster::subset(x, y) %>%
-            raster::stack()
-
-        } else if (class(y) == 'RasterStack' | class(y) == 'RasterBrick') {
-
-          z <- x*y
-          raster::stack(z)
-
-        }
+        raster::subset(x, y) %>%
+          raster::stack()
 
       } # close function
       ) # close lapply
     } # close function
     ) # close lapply
 
-  is_Phen_stack <-
-    lapply(seasons_mod, function(x){
+  if (class(summaryFUN) != "list") {
 
-      class(x) == 'RasterStack' | class(x) == 'RasterBrick'
+    summaryFUN_list <-
+      as.list(rep(summaryFUN, length(separated_rasters)))
+    names(summaryFUN_list) <- names(separated_rasters)
 
-    }
-    )
-
-  Phen_stacks <- seasons_mod[unlist(is_Phen_stack)]
-
-  if (length(Phen_stacks) > 0) {
-  separated_rasters <- append(separated_rasters,list(phen = Phen_stacks))
+  } else {
+    summaryFUN_list <- summaryFUN
   }
 
-    if (class(summaryFUN) != "list") {
-
-      summaryFUN_list <-
-        as.list(rep(summaryFUN, length(separated_rasters)))
-      names(summaryFUN_list) <- names(separated_rasters)
-
-    } else {
-      summaryFUN_list <- summaryFUN
-}
-
-    if (!is.null(summary_args)) {
+  if (!is.null(summary_args)) {
 
     unique_summary_FUN <- unique(unlist(summaryFUN_list))
 
@@ -194,113 +158,113 @@ summarize_rasters <- function(raster_stack,
     }
 
     summary_args_list_sub <-
-    lapply(summary_args_list, function(x){
+      lapply(summary_args_list, function(x){
 
-      lapply(x, function(y){
+        lapply(x, function(y){
 
-        if (length(y) == 1) {
-        if (y %in% names(separated_rasters$phen)) {
-          separated_rasters$phen[[y]]
+          if (length(y) == 1) {
+            if (y %in% names(separated_rasters$phen)) {
+              separated_rasters$phen[[y]]
+            }
+          } else {
+            y
+          }
+
         }
-        } else {
-          y
-        }
-
-      }
         )
 
-    }
+      }
       )
 
-    }
+  }
 
-    summarized_rasters <-
-      lapply(separated_rasters, function(x){
+  summarized_rasters <-
+    lapply(separated_rasters, function(x){
 
-        var_name <-
-          names(x[[1]]) %>%
-          `[`(1) %>%
-          strsplit(separator) %>%
-          `[[`(1) %>%
-          `[`(1)
+      var_name <-
+        names(x[[1]]) %>%
+        `[`(1) %>%
+        strsplit(separator) %>%
+        `[[`(1) %>%
+        `[`(1)
 
-        combinations <-
-          paste(var_name, names(x), sep = separator) %>%
-          expand.grid(summaryFUN_list[[var_name]])
+      combinations <-
+        paste(var_name, names(x), sep = separator) %>%
+        expand.grid(summaryFUN_list[[var_name]])
 
-        layer_names <-
-          paste(combinations[[1]], combinations[[2]], sep = separator)
+      layer_names <-
+        paste(combinations[[1]], combinations[[2]], sep = separator)
 
-        if (is.null(summary_args)) {
+      if (is.null(summary_args)) {
 
         output_list <-
           lapply(summaryFUN_list[[var_name]], function(y){
             lapply(x, function(z){
 
-            result_raster <- try(
-              raster::calc(z, fun = match.fun(y))
-            )
-
-          } # close function
-          ) # close lapply
-
-          } # close function
-          ) # close lapply
-
-        } else {
-
-          output_list <-
-            lapply(summaryFUN_list[[var_name]], function(y){
-
-              summaryFUN_call <-
-                function(w){
-
-                  n <- length(summary_args_list[[y]])
-
-                  summary_args_list_int <- summary_args_list_sub[[y]]
-
-                  summary_args_list_int <-
-                    summary_args_list_int %>%
-                    append(list(w))
-
-                  names(summary_args_list_int)[n + 1] <- formalArgs(pander::evals(y)[[1]]$result)[1]
-
-                  do.call(what = pander::evals(y)[[1]]$result, args = summary_args_list_int)
-                }
-
-              lapply(x, function(z){
-
-              result <- try(raster::calc(z, summaryFUN_call), silent = TRUE)
-
-              if (class(result) == 'try-error') {
-
-              result <- summaryFUN_call(z)
-
-              }
-
-              return(result)
-
-              }
+              result_raster <- try(
+                raster::calc(z, fun = match.fun(y))
               )
 
             } # close function
             ) # close lapply
 
-        }
+          } # close function
+          ) # close lapply
 
-        output_stack <- raster::stack(unlist(output_list))
+      } else {
 
-        names(output_stack) <- layer_names
+        output_list <-
+          lapply(summaryFUN_list[[var_name]], function(y){
 
-        return(output_stack)
+            summaryFUN_call <-
+              function(w){
 
-      } # close function
-      ) # close rapply
+                n <- length(summary_args_list[[y]])
 
-    summarized_stack <- raster::stack(summarized_rasters)
+                summary_args_list_int <- summary_args_list_sub[[y]]
 
-    final_stack <- raster::stack(summarized_stack, fixed_list)
+                summary_args_list_int <-
+                  summary_args_list_int %>%
+                  append(list(w))
 
-    return(final_stack)
+                names(summary_args_list_int)[n + 1] <- formalArgs(pander::evals(y)[[1]]$result)[1]
+
+                do.call(what = pander::evals(y)[[1]]$result, args = summary_args_list_int)
+              }
+
+            lapply(x, function(z){
+
+              result <- try(raster::calc(z, summaryFUN_call), silent = TRUE)
+
+              if (class(result) == 'try-error') {
+
+                result <- summaryFUN_call(z)
+
+              }
+
+              return(result)
+
+            }
+            )
+
+          } # close function
+          ) # close lapply
+
+      }
+
+      output_stack <- raster::stack(unlist(output_list))
+
+      names(output_stack) <- layer_names
+
+      return(output_stack)
+
+    } # close function
+    ) # close rapply
+
+  summarized_stack <- raster::stack(summarized_rasters)
+
+  final_stack <- raster::stack(summarized_stack, fixed_list)
+
+  return(final_stack)
 
 }

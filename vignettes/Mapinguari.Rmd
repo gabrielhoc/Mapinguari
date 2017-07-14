@@ -19,7 +19,7 @@ vignette: >
 
 The package is currently hosted on GitHub, this is how to install and load it, as well as how to access this manual:
 
-```{r, eval = FALSE}
+```{r}
 # You need package devtools to install packages from GitHub
 library(devtools)
 
@@ -232,11 +232,9 @@ raster::plot(Fulanus_present_two_seasons_summaries$prec_breeding_sum)
 raster::plot(Fulanus_present_two_seasons_summaries$prec_growing_sum)
 ```
 
-Now, let's say the most crucial period for *Fulanus* population dynamics is their breeding period and they wil breed only under certain climatic conditions. This might cause their breeding period to vary spatially and temporally. In order to account for that, function `summarize_rasters` can take other functions in argument `seasons`, which will take the environmental surfaces supplied as arguments and decide based on the values for each pixel in each raster if it is included in that season or not. This allows spatial variation in the seasons. `summarize_rasters` also has a `season_args` argument, which works as translation between function arguments and raster names, in the same way as `transformFUN_args` described above
+Now, let's say the most crucial period for *Fulanus* population dynamics is their breeding period and they wil breed only under certain climatic conditions. This might cause their breeding period to vary spatially and temporally. In order to account for that, we can fit a logistic model of breeding status vs climate, using data from the table `FulanusBreeding`, which contain data on breeding status and climate at different localities. Then we can use this model to create binary rasters with the locations where Fulanus is breeding at each month, using function `transform_rasters`. After that, we can use the binary rasters as weights for a weighted mean calculated with `summarize_rasters`, and that should give us the mean of any raster during breeding season with spatial variation. Argument `summary_args` allow us to input extra arguments in the summary functions, including the weights needed
 
 ```{r, message = FALSE, warning = FALSE, fig.height = 6, fig.width = 6}
-
-# Let's try first with a binomial glm that we are going to fit for the dataset `FulanusBreeding` that contains a binary variable indicating if Fulanus was breeding at each month, as well as corresponding climate data
 
 Phen_model <- fit_curves(formula = breeding + 0.0001 ~ SSlogis(log(prec), Asym, xmid, scal),
   predict_formals = "prec",
@@ -246,16 +244,22 @@ Phen_model <- fit_curves(formula = breeding + 0.0001 ~ SSlogis(log(prec), Asym, 
 
 PhenFUN1 <- Phen_model$model_1$predict
 
-Seasons_by_rain <-
-    summarize_rasters(FulanusEcoRasters_present$present,
-      seasons = list(breeding = PhenFUN1),
-      seasons_args = list(prec = 'prec'),
-      summaryFUN = "mean")
+season_rain_rasters <-
+  transform_rasters(raster_stack = FulanusEcoRasters_present$present,
+    transformFUN = list(season_rain = PhenFUN1),
+    transformFUN_args = list(prec = 'prec'))
 
-# a new `season_length` layer will be created, with the duration of the season.
+FulanusEcoRasters_season_rain <-
+    summarize_rasters(Perf_rasters_tmax,
+      seasons = list(year = c(1:12)),
+      summaryFUN = "weighted.mean", 
+      summary_args = list(weights = season_rain_rasters))
 
-raster::plot(Seasons_by_rain$phen_breeding_mean)
-raster::plot(Seasons_by_rain$prec_breeding_mean)
+# Length of Breeding season
+raster::plot(sum(season_rain_rasters))
+
+# Average Performance during breeding season
+raster::plot(FulanusEcoRasters_season_rain)
 ```
 
 ```{r, fig.height = 6, fig.width = 6}
@@ -264,31 +268,25 @@ raster::plot(Seasons_by_rain$prec_breeding_mean)
 
 PhenFUN2 <- function(x) ifelse(x > 80, 1, 0)
 
-Seasons_by_performance <-
- summarize_rasters(Perf_rasters_tmax,
-    seasons = list(breeding = PhenFUN2) ,
-    season_args = list(x = 'perf'))
+season_performance_rasters <-
+  transform_rasters(raster_stack = FulanusEcoRasters_present$present,
+    transformFUN = list(season_rain = PhenFUN2),
+    transformFUN_args = list(prec = 'prec'))
 
-raster::plot(Seasons_by_performance$present$season_length)
-raster::plot(Seasons_by_performance$present$perf_breeding)
+FulanusEcoRasters_season_performance <-
+    summarize_rasters(FulanusEcoRasters_present$present[[1:12]],
+      seasons = list(year = c(1:12)),
+      summaryFUN = "weighted.mean", 
+      summary_args = list(weights = season_performance_rasters))
 
-```
+# Length of Breeding season
+raster::plot(sum(season_performance_rasters))
 
-We haven't input anything on `summaryFUN`! If that happens, the function will return the result of the function in `seasons` for each month, in our case, it will show the areas that allow breeding for every month. What the function does is generate these rasters, multiplies then by the corresponding rasters for the other variables in that month, then applies the function in `summaryFUN`. While that might be work well with some functions, like `sum`, it does not make sense to do it with `mean`, since the proportion resulted from the function in `seasons` is not accounted for in the operation. For us to get an accurate average, given spatial variation in season, we would need a `weighted.mean`. That is a summary function that needs additional arguments, the weights. To input additional arguments for summary functions, we use argument `summaryFUN_args`
-
-```{r, fig.height = 6, fig.width = 6}
-
-Seasons_by_performance <-
- summarize_rasters(Perf_rasters_tmax,
-    seasons = list(breeding = PhenFUN2) ,
-    season_args = list(x = 'perf'), 
-   summaryFUN = "weighted.mean", 
-   summary_args = "season_length")
-
-raster::plot(Seasons_by_performance$present$season_length)
-raster::plot(Seasons_by_performance$present$perf_breeding)
+# Average Performance during breeding season
+raster::plot(FulanusEcoRasters_season_performance)
 
 ```
+
 
 Note that the season by performance maps have blank spots both in the Season and NonSeason rasters, while the season by rain maps have blank spots only on the Season raster. Why is that? Let's look at the values for the season length at the present for both the `Seasons_by_rain` and `Seasons_by_performance`.
 
@@ -297,7 +295,7 @@ Note that the season by performance maps have blank spots both in the Season and
 Coming soon.
 
 Steps:
--Use `transform_rasters` to calculate EVI (Find EVI equation, if can't find it, use NDVI instead);
+- get EVI or NDVI rasters
 -Get EVI values for the coordinates of the locations in the table `FulanusMicroclimate` and add values to the table;
 -Use `fit_curves` to make a model like `HA ~ temp + EVI` from `FulanusMicroclimate`;
 -Use `transform_rasters` again to extrapolate HA.
