@@ -6,7 +6,7 @@
 \usage{
 summarize_rasters(raster_stack, seasons = list(year = c(1:12)),
   summaryFUN = "mean", summary_args = NULL, separator = "_",
-  time_res = 12)
+  time_res = 12, alert = NULL)
 }
 \arguments{
 \item{raster_stack}{RasterStack.}
@@ -20,6 +20,8 @@ summarize_rasters(raster_stack, seasons = list(year = c(1:12)),
 \item{separator}{character. Character that separates variable names, years and scenarios.}
 
 \item{time_res}{integer. How many layers do time varying variables have? Default is 12, as in 12 months in a year, the time resolution in WorldClim.}
+
+\item{alert}{integer. Plays a sound alert when function is done running. See documentation of package beepr for description of sound options.}
 }
 \value{
 Returns a list of raster stacks for the variables required, organized by year/scenario combination.
