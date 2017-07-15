@@ -146,16 +146,18 @@ fit_curves <- function(formula,
 
       args_mat <- do.call(data.frame, as.list(environment()))
 
-      output_list <- plyr::alply(args_mat, 1, function(y) {
-        switch(class(x),
-          glm = ,
-          gam = ,
-          gamm = stats::predict(x, y, type = 'response'),
-          nls = stats::predict(x, y)[1],
-          stats::predict(x, y)
-        )
-        }
-      )
+      output_list <- plyr::alply(args_mat, 1, function(y) stats::predict(x, y, type = 'response'))
+
+      #output_list <- plyr::alply(args_mat, 1, function(y) {
+      #  switch(class(x),
+      #    glm = ,
+      #    gam = ,
+      #    gamm = stats::predict(x, y, type = 'response'),
+      #    nls = stats::predict(x, y)[1],
+      #    stats::predict(x, y)
+      #  )
+      #  }
+      #)
 
       unlist(output_list)
 
