@@ -180,8 +180,10 @@ summarize_rasters <- function(raster_stack,
 
   }
 
+  separated_rasters_var_only <- separated_rasters[names(summaryFUN)]
+
   summarized_rasters <-
-    lapply(separated_rasters, function(x){
+    lapply(separated_rasters_var_only, function(x){
 
       var_name <-
         names(x[[1]]) %>%
@@ -229,7 +231,7 @@ summarize_rasters <- function(raster_stack,
                   summary_args_list_int %>%
                   append(list(w))
 
-                names(summary_args_list_int)[n + 1] <- formalArgs(pander::evals(y)[[1]]$result)[1]
+                names(summary_args_list_int)[n + 1] <- methods::formalArgs(pander::evals(y)[[1]]$result)[1]
 
                 do.call(what = pander::evals(y)[[1]]$result, args = summary_args_list_int)
               }

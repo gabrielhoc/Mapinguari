@@ -51,7 +51,8 @@ Perf_rasters <-
     transformFUN_args = list(temp = 'tmax', size = mean(FulanusPhysiology$size))
   )
 
-# If the functions in `summarize_rasters`` are commutative, you can summarize before transforming, which is much faster.
+# If the functions in `summarize_rasters`` are commutative,
+# you can summarize before transforming, which is much faster.
 
 Phenology_mean <-
   lapply(Fulanus_Ecorasters_download, summarize_rasters,
@@ -64,7 +65,8 @@ Perf_rasters_mean <-
     transformFUN_args = list(temp = 'tmax', size = mean(FulanusPhysiology$size))
   )
 
-# The function works on RasterStacks, if you have a list of stacks, you can apply the function to each element using lapply
+# The function works on RasterStacks, if you have a list of stacks,
+# you can apply the function to each element using lapply
 
 Perf_rasters_list <- lapply(Phenology_mean, transform_rasters,
   transformFUN = list(perf = perf_functions$tpc_size$predict),

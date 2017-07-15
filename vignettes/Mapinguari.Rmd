@@ -41,18 +41,18 @@ library(Mapinguari)
 library(ggmap)
 library(ggplot2)
 
-Fulanus_bbox <- ggmap::make_bbox(lat = Lat, 
+Fulanus_bbox <- make_bbox(lat = Lat, 
   lon = Lon, 
   data = FulanusDistribution,
   f = 0.2)
 
-Fulanus_big <- ggmap::get_map(location = Fulanus_bbox, 
+Fulanus_big <- get_map(location = Fulanus_bbox, 
   source = "google", 
   maptype = "terrain")
 
-ggmap::ggmap(Fulanus_big) +
-  ggplot2::geom_point(data = FulanusDistribution, 
-    mapping = ggplot2::aes(x = Lon, y = Lat), 
+ggmap(Fulanus_big) +
+  geom_point(data = FulanusDistribution, 
+    mapping = aes(x = Lon, y = Lat), 
     size = 1, 
     colour = 'red')
 ```
@@ -64,7 +64,8 @@ First, let's get some information on the climate of this region.
 How does the climate looks like in this area? We can use function `get_rasters` to extract WorldClim surfaces for that area. The argument `ext` tells us which is the area you desire to crop your rasters around. It accepts either a numerical vector with the coordinates of cropping limits (in order: western most longitude, easter most longitude, southern most latitude then northern most latitude), or a table of longitudes and latitudes, in which case it will grab the coordinates of the most extreme points and use those as the cropping limits. The argument `margin` adds to these limits, and it is on the same unit as the coordinates you supply.
 
 ```{r, message = FALSE, warning = FALSE, fig.height = 6, fig.width = 6}
-library('Mapinguari')
+library(Mapinguari)
+library(raster)
 
 FulanusEcoRasters_present <-
    get_rasters(
@@ -76,10 +77,10 @@ FulanusEcoRasters_present <-
      years = c("present"),
      reorder = TRUE)
 
-raster::plot(FulanusEcoRasters_present[[1]])
+plot(FulanusEcoRasters_present[[1]])
 ```
 
-`get_rasters` is able to download rasters from WorldClim, but you probably don't want to download them every time you are executing the function. That's why the argument `raster_source` will also take a list of rasters from your workspace or a path to a folder containing those rasters. These options also have the advantage of being able to input any raster you want, not being limited to the ones you can download from WorldClim.
+`get_rasters` is able to download rasters from WorldClim if you leave `raster_source` blank, but you probably don't want to download them every time you are executing the function. That's why the argument `raster_source` will also take a list of rasters from your workspace or a path to a folder containing those rasters. These options also have the advantage of being able to input any raster you want, not being limited to the ones you can download from WorldClim.
 
 However, in order for Mapinguari to recognize which variables correspond to each year or scenario, you have to name your folders and list elements following the convention *variable_year_scenario*. The default character for separating those terms is "_", but you can change that, as long as you do the corresponding change to the argument `separator` in the function. Some of your rasters will not be subject to scenarios, since they are measures of current climate, instead of projections. In that case you only have to name them *variable_year*, omitting the scenario term. The argument `baseline` identifies which years are not subject to scenarios. The default for this argument is `present`, but it can be changed at your convenience. Some other variables are constant accross time, such as altitude. In that case you only have to write the name of the variable. Here is an example of how my folder is structured:
 
@@ -108,7 +109,7 @@ FulanusEcoRasters_future <-
      scenarios = c('rcp26', 'rcp45', 'rcp85'),
      reorder = TRUE)
 
-raster::plot(FulanusEcoRasters_future$`2050_rcp26`)
+plot(FulanusEcoRasters_future$`2050_rcp26`)
 ```
 
 As you can see, we have multiple rasters for each variable, one for each month. When doing biogeographical analysis, such as species distribution models, we are generally need a single raster for each variable, such as the annual average or total. Function `summarize_rasters` allows us to summarize time-varying rasters accross the year or parts of the year.
@@ -137,9 +138,9 @@ Fulanus_present_two_seasons_summaries <-
     seasons = list(breeding = c(3:6), growing = c(8:11)),
     summaryFUN = list(tmax = c("mean", "sd"), tmin = c("mean", "sd"), prec = "sum"))
 
-raster::plot(Fulanus_present_year_summaries$prec_year_sum)
-raster::plot(Fulanus_present_two_seasons_summaries$prec_breeding_sum)
-raster::plot(Fulanus_present_two_seasons_summaries$prec_growing_sum)
+plot(Fulanus_present_year_summaries$prec_year_sum)
+plot(Fulanus_present_two_seasons_summaries$prec_breeding_sum)
+plot(Fulanus_present_two_seasons_summaries$prec_growing_sum)
 ```
 
 Now that we have information on the climate where the species live, let's get some information on the species physiology.
@@ -220,8 +221,8 @@ Perf_rasters_tmin <-
     transformFUN_args = list(temp = 'tmin', size = mean(FulanusPhysiology$size)),
     alert = 2)
 
-raster::plot(Perf_rasters_tmax$perf_year_mean)
-raster::plot(Perf_rasters_tmin$perf_year_mean)
+plot(Perf_rasters_tmax$perf_year_mean)
+plot(Perf_rasters_tmin$perf_year_mean)
 ```
 
 The function operates in RasterStacks, if you want to apply it to a list, you can use `lapply`:
@@ -240,7 +241,7 @@ Perf_rasters_list <- lapply(FulanusEcoRasters_future_temps, transform_rasters,
 
 Now, let's say the most crucial period for *Fulanus* population dynamics is their breeding period and they wil breed only under certain climatic conditions. This might cause their breeding period to vary spatially and temporally. In order to account for that, we can fit a logistic model of breeding status vs climate, using data from the table `FulanusBreeding`, which contain data on breeding status and climate at different localities. Then we can use this model to create binary rasters with the locations where Fulanus is breeding at each month, using function `transform_rasters`. After that, we can use the binary rasters as weights for a weighted mean calculated with `summarize_rasters`, and that should give us the mean of any raster during breeding season with spatial variation. Argument `summary_args` allow us to input extra arguments in the summary functions, including the weights needed
 
-```{r, message = FALSE, warning = FALSE, fig.height = 6, fig.width = 6}
+```{r, fig.height = 6, fig.width = 6}
 
 Phen_model <- fit_curves(formula =  breeding ~ prec,
   data = FulanusBreeding, 
@@ -259,49 +260,51 @@ season_rain_rasters <-
 # Let's convert the raster to binary
 
 season_rain_rasters_binary <-
-  raster::calc(season_rain_rasters, function(x) ifelse(x < 0.5, 0, 1))
+  calc(season_rain_rasters, function(x) ifelse(x < 0.5, 0, 1))
 
 FulanusEcoRasters_season_rain <-
-    summarize_rasters(Perf_rasters_tmax,
+    summarize_rasters(FulanusEcoRasters_present$present,
       seasons = list(year = c(1:12)),
       summaryFUN = "weighted.mean", 
       summary_args = list(weights = season_rain_rasters_binary))
 
 # Length of Breeding season
-raster::plot(sum(season_rain_rasters))
+plot(sum(season_rain_rasters))
 
 # Average Performance during breeding season
-raster::plot(FulanusEcoRasters_season_rain)
+plot(FulanusEcoRasters_season_rain$tmax_year_weighted.mean)
 ```
 
 ```{r, fig.height = 6, fig.width = 6}
 
-# The function can also be a condition. Let's say we are only interested on the periods when performance is bigger than 80.
+# The function can also be a condition. Let's say we are only interested on the periods when precipitation is bigger than 150.
 
-PhenFUN2 <- function(x) ifelse(x > 80, 1, 0)
+PhenFUN2 <- function(x) ifelse(x > 150, 1, 0)
 
-season_performance_rasters <-
+season_prec_rasters <-
   transform_rasters(raster_stack = FulanusEcoRasters_present$present,
     transformFUN = list(season_rain = PhenFUN2),
     transformFUN_args = list(prec = 'prec'))
 
-FulanusEcoRasters_season_performance <-
+FulanusEcoRasters_season_prec <-
     summarize_rasters(FulanusEcoRasters_present$present[[1:12]],
       seasons = list(year = c(1:12)),
       summaryFUN = "weighted.mean", 
-      summary_args = list(weights = season_performance_rasters))
+      summary_args = list(weights = season_prec_rasters))
 
 # Length of Breeding season
-raster::plot(sum(season_performance_rasters))
+plot(sum(season_prec_rasters))
 
 # Average Performance during breeding season
-raster::plot(FulanusEcoRasters_season_performance)
+plot(FulanusEcoRasters_season_prec)
 
 ```
 
 ## An integrative example, calculating hours of activity
 
-Coming soon.
+under development
+
+*Describe data set
 
 Steps:
 -get EVI or NDVI rasters
@@ -309,7 +312,71 @@ Steps:
 -Use `fit_curves` to make a model like `HA ~ temp + EVI` from `FulanusMicroclimate`;
 -Use `transform_rasters` again to extrapolate HA.
 
+```{r}
+head(FulanusMicroclimate)
+```
+
 
 ```{r}
+# Summarise microclimate table by day
+#make this into a function
 
+library(dplyr)
+
+# Fulanus only has activity on microhabitats between 21 and 33 degrees celsius
+
+FulanusMicroclimate$HA <- ifelse(FulanusMicroclimate$temp > 21 & FulanusMicroclimate$temp < 33, 1, 0)
+
+# make safe check to see if every day is on the same temporal resolution
+
+resolution_minutes <- 4
+
+microclimate_by_day <- 
+group_by(FulanusMicroclimate, day, month, year) %>% 
+summarise(HA = sum(HA)/60/resolution_minutes, 
+          avg_temp = mean(t_air),
+          Lon = unique(Lon), 
+          Lat = unique(Lat))
+
+# try to do with FlexParamCurve, instead of nls
+# for nls, we have to specify the formal arguments of the predict function, because the formula is weird
+
+HA_curve <- 
+fit_curves(HA ~ SSlogis(avg_temp, Asym, xmid, scal), 
+  data = microclimate_by_day, 
+  fitFUN = nls,
+  predict_formals = "temp")
+
+HA_curve$model_1$predict
+
+# Let's try also including EVI
+# I don't have a EVI surface right now, so let's pretend this is it 
+EVI_present <- FulanusEcoRasters_present$present$prec_1
+
+# let's include a new column in the table with EVI
+library(raster)
+microclimate_by_day$EVI <- extract(EVI_present, data.frame(Lon = microclimate_by_day$Lon, Lat = microclimate_by_day$Lat))
+
+# Let's try fitting a curve with EVI
+
+HA_EVI_curve <- 
+fit_curves(HA ~ SSlogis(avg_temp + EVI, Asym, xmid, scal), 
+  data = microclimate_by_day, 
+  fitFUN = nls,
+  predict_formals = c("temp", "EVI"))
+
+# get necessary variables (it should be EVI instead of prec, I'm using it as a placeholder)
+
+Fulanus_present_year_averages <-
+   summarize_rasters(FulanusEcoRasters_present[[1]],
+    seasons = list(year = c(1:12)),
+    summaryFUN = list(tmax = "mean", prec = "mean"))
+
+HA_raster_present <-
+  transform_rasters(raster_stack = Fulanus_present_year_averages,
+    transformFUN = list(HA = HA_EVI_curve$model_1$predict),
+    transformFUN_args = list(temp = 'tmax', EVI = 'prec'), # 'prec' is here as a placeholder, get real EVI
+    alert = 1)
+
+plot(HA_raster_present)
 ```
