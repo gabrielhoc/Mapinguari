@@ -18,7 +18,8 @@ Suggests:
     beepr,
     knitr,
     rmarkdown,
-    testthat
+    testthat,
+    mgcv
 VignetteBuilder: knitr
 Imports: 
     magrittr,

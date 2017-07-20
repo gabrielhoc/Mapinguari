@@ -4,74 +4,43 @@
 \alias{transform_rasters}
 \title{Transform environmental rasters in ecophysiological rasters.}
 \usage{
-transform_rasters(raster_stack, transformFUN, transformFUN_args,
-  separator = "_", time_res = 12, alert = NULL)
+transform_rasters(raster_stack, FUN_qlist, separator = "_", alert = NULL)
 }
 \arguments{
-\item{raster_stack}{character or list of RasterStack. You can either input a path to a folder with the required rasters or a list of RasterStack organized by year/scenario.}
+\item{raster_stack}{RasterStack. Stack with environmental layers.}
 
-\item{transformFUN}{function. Function used to modify rasters.}
-
-\item{transformFUN_args}{named list of strings. Correspondence between transformFUN arguments and raster names.}
+\item{FUN_qlist}{list. A list of unevaluated expressions, as created by function qlist.}
 
 \item{separator}{character. Character that separates variable names, years and scenarios.}
-
-\item{time_res}{How many layers do time varying variables have? Default is 12, as in 12 months in a year, the time resolution in WorldClim.}
 
 \item{alert}{integer. Plays a sound alert when function is done running. See documentation of package beepr for description of sound options.}
 }
 \value{
-Returns a list of raster stacks for the variables required, organized by year/scenario combination.
+Returns a RasterStack with layers for the predictions required.
 }
 \description{
-\code{transform_rasters} Get model predictions for a ras
+\code{transform_rasters} Get model predictions for a raster stack
 }
 \examples{
 
-Fulanus_Ecorasters_download <-
+FulanusEcoRasters_present <-
   get_rasters(
+    raster_source = "/Users/gabriel/Documents/Mapinguari/global_grids_10_minutes",
     ext = FulanusDistribution,
     margin = 5,
     non_fixed_var = c('prec', 'tmin', 'tmax'),
-    years = c("present", '2050', '2070'),
-    scenarios = c('rcp26', 'rcp45', 'rcp85'),
-    alert = 6)
+    fixed_var = 'alt',
+    years = c("present"),
+    reorder = TRUE)
 
-perf_functions <-
-  fit_curves(formula = list(tpc_size = performance ~ s(temp, bs = 'cs') + size,
-    tpc_no_size = performance ~ s(temp, bs = 'cs')),
-    data = FulanusPhysiology,
-    fitFUN = mgcv::gamm,
-    args_list = list(random = list(id = ~ 1))
-  )
-
-Perf_rasters <-
-  transform_rasters(raster_stack = Fulanus_Ecorasters_download[[1]],
-    transformFUN = list(perf = perf_functions$tpc_size$predict),
-    transformFUN_args = list(temp = 'tmax', size = mean(FulanusPhysiology$size))
-  )
-
-# If the functions in `summarize_rasters`` are commutative,
-# you can summarize before transforming, which is much faster.
-
-Phenology_mean <-
-  lapply(Fulanus_Ecorasters_download, summarize_rasters,
-    seasons = list(breeding = c(3:8), non_breeding = c(9:12, 1, 2)),
-    summaryFUN = list(tmax = c("mean"), tmin = c("mean"), prec = "sum"))
-
-Perf_rasters_mean <-
-  transform_rasters(raster_stack =  Phenology_mean[[1]],
-    transformFUN = list(perf = perf_functions$tpc_size$predict),
-    transformFUN_args = list(temp = 'tmax', size = mean(FulanusPhysiology$size))
-  )
-
-# The function works on RasterStacks, if you have a list of stacks,
-# you can apply the function to each element using lapply
-
-Perf_rasters_list <- lapply(Phenology_mean, transform_rasters,
-  transformFUN = list(perf = perf_functions$tpc_size$predict),
-  transformFUN_args = list(temp = 'tmax', size = mean(FulanusPhysiology$size))
-)
-
+transform_rasters(raster_stack = FulanusEcoRasters_present$present,
+  FUN = qlist(total_1sem = sum(tmax[[1:6]]),
+    mean_1sem = mean(tmax[[1:6]]),
+    sd_1sem = sd(tmax[[1:6]]),
+    total_2sem = sum(tmax[[7:12]]),
+    mean_2sem = mean(tmax[[7:12]]),
+    sd_2sem = sd(tmax[[7:12]])),
+  separator = '_',
+  alert = NULL)
 
 }

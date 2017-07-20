@@ -2,75 +2,32 @@
 % Please edit documentation in R/fit_curves.R
 \name{fit_curves}
 \alias{fit_curves}
-\title{Creates functions relating environment to physiology.}
+\title{Creates vectorized predict functions from models.}
 \usage{
-fit_curves(formula, data, fitFUN, predict_formals = NULL, args_list = NULL,
-  separator = "_")
+fit_curves(models, predict_formals = NULL, separator = "_")
 }
 \arguments{
-\item{formula}{formula. Model formula.}
+\item{models}{list. List with models that have methods for function `predict`.}
 
-\item{data}{data frame. Table containing variables in model formula.}
-
-\item{fitFUN}{call. Algorithm used for model.}
-
-\item{predict_formals}{character. Names of variables necessary for predict function. If NULL, function will attempt to retrieve them from formula.}
-
-\item{args_list}{named list. list of arguments to be passed to the function in fitFUN.}
+\item{predict_formals}{character. Names of variables necessary for predict function. If NULL, function will attempt to retrieve them from the model's formula.}
 
 \item{separator}{character. Character that separates variable names, years and scenarios.}
 }
 \value{
-Returns a tibble containing model specifications, statistics and a predictor function.
+Returns a list with a table of statistics for model comparision, and a list for each model containing the original call, its output and a vectorized function that gets predictions for the model.
 }
 \description{
-\code{fit_curves} Creates functions relating environment to physiology. You can run multiple models if you input their arguments as lists.
+\code{fit_curves} Takes inputed models and create vectorized functions able to get the model predictionsfor any value inputed. Also outputs a table comparing models.
 }
 \examples{
-perf_functions <-
-  fit_curves(formula = list(tpc_size = performance ~ s(temp, bs = 'cs') + size,
-    tpc_no_size = performance ~ s(temp, bs = 'cs')),
-    data = FulanusPhysiology,
-    fitFUN = mgcv::gamm,
-    args_list = list(random = list(id = ~ 1))
-  )
 
-perf_functions2 <-
-  fit_curves(formula = list(tpc_size = performance ~ s(temp, bs = 'cs') + size,
-    tpc_no_size = performance ~ s(temp, bs = 'cs')),
-    data = FulanusPhysiology,
-    fitFUN = gamm,
-    args_list = list(random = list(id = ~ 1),
-      correlation = nlme::corAR1(form = ~ 1 | id))
-  )
+library(mgcv)
 
-formula_list <-
-  list(
-    performance ~ s(temp, bs = 'cs'),
-    performance ~ s(temp, bs = 'cs') + size,
-    performance ~ s(temp, bs = 'cs') + hydration,
-    performance ~ s(temp, bs = 'cs') + hydration + size
-  )
-
-perf_functions <-
-  fit_curves(formula = formula_list,
-    data = FulanusPhysiology,
-    fitFUN = mgcv::gamm,
-    args_list = list(random = list(id = ~ 1))
-  )
-
-# allow multiple arguments
-
-correlation_list <- list(correlation = nlme::corAR1(form = ~ 1 | id),
-  correlation = nlme::corAR1(0.1, form = ~ 1 | id),
-  correlation = nlme::corARMA(form = ~ 1 | id),
-  correlation = nlme::corARMA(0.1, form = ~ 1 | id))
-
-perf_functions <-
-  fit_curves(formula = formula_list,
-    data = FulanusPhysiology,
-    fitFUN = mgcv::gamm,
-    args_list = correlation_list
-  )
+  fit_curves(FUN_qlist = qlist(tpc_size = gamm(performance ~ s(temp, bs = 'cs') + size,
+                                               random = list(id = ~ 1),
+                                               data = FulanusPhysiology),
+                               tpc_no_size = gamm(performance ~ s(temp, bs = 'cs'),
+                                                  random = list(id = ~ 1)),
+                                                  data = FulanusPhysiology))
 
 }

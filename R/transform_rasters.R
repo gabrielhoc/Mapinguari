@@ -1,75 +1,42 @@
 #' Transform environmental rasters in ecophysiological rasters.
 #'
-#' \code{transform_rasters} Get model predictions for a ras
+#' \code{transform_rasters} Get model predictions for a raster stack
 #'
-#' @param raster_stack character or list of RasterStack. You can either input a path to a folder with the required rasters or a list of RasterStack organized by year/scenario.
-#' @param transformFUN function. Function used to modify rasters.
-#' @param transformFUN_args named list of strings. Correspondence between transformFUN arguments and raster names.
+#' @param raster_stack RasterStack. Stack with environmental layers.
+#' @param FUN_qlist list. A list of unevaluated expressions, as created by function qlist.
 #' @param separator character. Character that separates variable names, years and scenarios.
-#' @param time_res How many layers do time varying variables have? Default is 12, as in 12 months in a year, the time resolution in WorldClim.
 #' @param alert integer. Plays a sound alert when function is done running. See documentation of package beepr for description of sound options.
 #'
-#' @return Returns a list of raster stacks for the variables required, organized by year/scenario combination.
+#' @return Returns a RasterStack with layers for the predictions required.
 #'
 #' @examples
 #'
-#' Fulanus_Ecorasters_download <-
+#' FulanusEcoRasters_present <-
 #'   get_rasters(
+#'     raster_source = "/Users/gabriel/Documents/Mapinguari/global_grids_10_minutes",
 #'     ext = FulanusDistribution,
 #'     margin = 5,
 #'     non_fixed_var = c('prec', 'tmin', 'tmax'),
-#'     years = c("present", '2050', '2070'),
-#'     scenarios = c('rcp26', 'rcp45', 'rcp85'),
-#'     alert = 6)
+#'     fixed_var = 'alt',
+#'     years = c("present"),
+#'     reorder = TRUE)
 #'
-#' perf_functions <-
-#'   fit_curves(formula = list(tpc_size = performance ~ s(temp, bs = 'cs') + size,
-#'     tpc_no_size = performance ~ s(temp, bs = 'cs')),
-#'     data = FulanusPhysiology,
-#'     fitFUN = mgcv::gamm,
-#'     args_list = list(random = list(id = ~ 1))
-#'   )
-#'
-#' Perf_rasters <-
-#'   transform_rasters(raster_stack = Fulanus_Ecorasters_download[[1]],
-#'     transformFUN = list(perf = perf_functions$tpc_size$predict),
-#'     transformFUN_args = list(temp = 'tmax', size = mean(FulanusPhysiology$size))
-#'   )
-#'
-#' # If the functions in `summarize_rasters`` are commutative,
-#' # you can summarize before transforming, which is much faster.
-#'
-#' Phenology_mean <-
-#'   lapply(Fulanus_Ecorasters_download, summarize_rasters,
-#'     seasons = list(breeding = c(3:8), non_breeding = c(9:12, 1, 2)),
-#'     summaryFUN = list(tmax = c("mean"), tmin = c("mean"), prec = "sum"))
-#'
-#' Perf_rasters_mean <-
-#'   transform_rasters(raster_stack =  Phenology_mean[[1]],
-#'     transformFUN = list(perf = perf_functions$tpc_size$predict),
-#'     transformFUN_args = list(temp = 'tmax', size = mean(FulanusPhysiology$size))
-#'   )
-#'
-#' # The function works on RasterStacks, if you have a list of stacks,
-#' # you can apply the function to each element using lapply
-#'
-#' Perf_rasters_list <- lapply(Phenology_mean, transform_rasters,
-#'   transformFUN = list(perf = perf_functions$tpc_size$predict),
-#'   transformFUN_args = list(temp = 'tmax', size = mean(FulanusPhysiology$size))
-#' )
-#'
+#' transform_rasters(raster_stack = FulanusEcoRasters_present$present,
+#'   FUN = qlist(total_1sem = sum(tmax[[1:6]]),
+#'     mean_1sem = mean(tmax[[1:6]]),
+#'     sd_1sem = sd(tmax[[1:6]]),
+#'     total_2sem = sum(tmax[[7:12]]),
+#'     mean_2sem = mean(tmax[[7:12]]),
+#'     sd_2sem = sd(tmax[[7:12]])),
+#'   separator = '_',
+#'   alert = NULL)
 #'
 #' @export
 
 transform_rasters <- function(raster_stack,
-  transformFUN,
-  transformFUN_args,
+  FUN_qlist,
   separator = '_',
-  time_res = 12,
-  alert = NULL
-) {
-
-  # split stack by variable
+  alert = NULL){
 
   split_vars <-
     raster_stack %>%
@@ -90,179 +57,65 @@ transform_rasters <- function(raster_stack,
 
   names(separate_list) <- unique_split_vars
 
-  # separate fixed from non fixed variables
+  for (i in 1:length(separate_list)) assign(names(separate_list)[i], separate_list[[i]])
 
-  non_fixed_logical <-
-    lapply(separate_list, function(u) length(names(u)) == time_res) %>%
-    unlist()
+  output <-
+    lapply(FUN_qlist, function(x){
 
-  non_fixed_list <- separate_list[which(non_fixed_logical)]
+      FUN_list <- as.list(x)
 
-  non_fixed_names <- names(separate_list)[which(non_fixed_logical)]
+      actualFUN <- eval(FUN_list[[1]])
 
-  names(non_fixed_list) <- non_fixed_names
-
-  fixed_list <- separate_list[which(!non_fixed_logical)]
-
-  fixed_names <- names(separate_list)[which(!non_fixed_logical)]
-
-  names(fixed_list) <- fixed_names
-
-  if (class(transformFUN) != 'list') transformFUN <- list(transformFUN)
-  if (is.null(names(transformFUN))) names(transformFUN) <- paste("var", 1:length(transformFUN),  sep = separator)
-
-  args_rasters <-
-    transformFUN_args %>%
-    sapply(., function(x) class(x) == "character" | class(x) == "call") %>%
-    `[`(transformFUN_args, .)
-
-  args_constant <-
-    transformFUN_args %>%
-    sapply(., function(x) class(x) == "numeric") %>%
-    `[`(transformFUN_args, .)
-
-  raster_by_arg <-
-    lapply(args_rasters, function(y) {
-
-      if (class(y) == 'call') {
-
-        eval(y)
-
-      } else {
-
-        raster_stack %>%
-          names() %>%
-          grep(paste("^", y, sep = ""), .) %>%
-          `[[`(raster_stack, .)
-
-      }
-
-    } # close function
-    ) # close laply
-
-  raster_by_arg_by_rep <-
-    lapply(raster_by_arg, function(x){
-
-      repeated_names <- lapply(strsplit(names(x), separator), function(y){
-
-        paste(y[-1], collapse = separator)
-
-      }
-      )
-
-      if (class(x) == 'RasterStack') {
-        repeated_list <- raster::unstack(x)
-      } else {
-        repeated_list <- list(x)
-      }
-
-      names(repeated_list) <- repeated_names
-
-      repeated_list
-
-    }
-    )
-
-  reversed_list <-
-    raster_by_arg_by_rep %>%
-    purrr::transpose()
-
-  list_names <-
-  plyr::alply(reversed_list, 1, function(x){
-
-      strsplit(names(x[[1]]), separator)[[1]][-1] %>%
-      as.list() %>%
-      append(list(sep = separator)) %>%
-      do.call(paste, .)
-
+      arguments <- if (inherits(FUN_list[-1], "list")) {
+        lapply(FUN_list[-1], eval, parent.frame(n = 2))
+        } else {
+        lapply(list(FUN_list[-1]), eval, parent.frame(n = 2))
   }
-    )
 
-  names(reversed_list) <- list_names
+      isRaster <- lapply(arguments, function(y) class(eval(y)) == 'RasterStack' | class(eval(y)) == 'RasterLayer') %>% unlist()
 
-  transformed_rasters <- lapply(reversed_list, function(x){
+      raster_args <- lapply(arguments[isRaster], eval)
+      args_stack <- raster::stack(raster_args)
+      other_args <-  lapply(arguments[!isRaster], eval)
 
-    prediction <-
-      lapply(transformFUN, function(y) {
+      raster_lengths <- unlist(lapply(raster_args, raster::nlayers))
 
-        new_default <-
-        names(args_constant) %in% methods::formalArgs(y) %>%
-          `[`(args_constant, .)
+      adaptedFUN <- function(y, lengths, args, .FUN){
 
-        formals(y)[names(new_default)] <- new_default
+        call_list_rasters <-
+          lapply(lengths, function(z){
 
-        calc_stack <- raster::stack(x)
+            y[1:z]
 
-        ncores <- parallel::detectCores() - 1
-        raster::beginCluster(ncores, type = 'SOCK')
+          })
 
-        output <- raster::clusterR(calc_stack, raster::overlay, args = list(fun = y))
+        call_list <- append(call_list_rasters, args)
 
-        raster::endCluster()
-
-        output
+        do.call(what = .FUN, args = call_list)
 
       }
-      )
 
-    prediction_named <-
-      plyr::alply(1:length(prediction), 1, function(i){
+      formals(adaptedFUN)$lengths <- raster_lengths
+      formals(adaptedFUN)$args <- other_args
+      formals(adaptedFUN)$.FUN <- actualFUN
 
-        names(prediction[[i]]) <- names(prediction)
-        prediction[[i]]
+      ncores <- parallel::detectCores() - 1
+      raster::beginCluster(ncores, type = 'SOCK')
 
-      }
-      )
+      transformed_rasters <- try(raster::clusterR(x = args_stack, fun = raster::overlay,  args = list(fun = adaptedFUN)), silent = TRUE)
 
-    names(prediction_named) <- names(prediction)
-    prediction_named
+      if (class(transformed_rasters) == 'try-error') raster::overlay(args_stack, fun = adaptedFUN)
 
-  } # close function
-  ) # close lapply
+      raster::endCluster()
 
-  unreversed_list <-
-    transformed_rasters %>%
-    purrr::transpose()
+      names(transformed_rasters) <- ifelse(names(transformed_rasters) == 'layer', paste(paste(x), collapse = separator), names(transformed_rasters))
 
-  transformed_stack <-
-    lapply(unreversed_list, function(x){
+      transformed_rasters
 
-      single_var_stack <-
-        raster::stack(x)
-
-      names(single_var_stack) <- paste(unlist(lapply(x, names)), names(x), sep = separator)
-
-      single_var_stack
-
-    }
-    )
+    })
 
   if (!is.null(alert)) {beepr::beep(alert)}
 
-  return(raster::stack(transformed_stack))
-
-}
-
-lagged <- function(var, lag, stack) {
-
-  substitute(lagged_q(var, lag, stack))
-
-}
-
-lagged_q <- function(var, lag, stack = NULL) {
-
-  if (is.null(stack)) stack <- get("x", envir = parent.frame())
-
-  var_stack <-
-    stack %>%
-    names() %>%
-    grep(paste("^", var, sep = ""), .) %>%
-    `[[`(stack, .)
-
-  index_lag <- 1:raster::nlayers(var_stack) + lag
-
-  index_lag[index_lag < 1] <- index_lag[index_lag < 1] + raster::nlayers(var_stack)
-
-  return(var_stack[[index_lag]])
+  return(raster::stack(output))
 
 }

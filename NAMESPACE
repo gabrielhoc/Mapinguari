@@ -2,6 +2,6 @@
 
 export(fit_curves)
 export(get_rasters)
-export(summarize_rasters)
+export(qlist)
 export(transform_rasters)
 importFrom(magrittr,"%>%")
