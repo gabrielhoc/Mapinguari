@@ -12,12 +12,12 @@
 #'
 #' library(mgcv)
 #'
-#'   fit_curves(FUN_qlist = qlist(tpc_size = gamm(performance ~ s(temp, bs = 'cs') + size,
-#'                                                random = list(id = ~ 1),
-#'                                                data = FulanusPhysiology),
-#'                                tpc_no_size = gamm(performance ~ s(temp, bs = 'cs'),
-#'                                                   random = list(id = ~ 1)),
-#'                                                   data = FulanusPhysiology))
+#'   fit_curves(models = list(tpc_size = gamm(performance ~ s(temp, bs = 'cs') + size,
+#'                                            random = list(id = ~ 1),
+#'                                            data = FulanusPhysiology),
+#'                            tpc_no_size = gamm(performance ~ s(temp, bs = 'cs'),
+#'                                               random = list(id = ~ 1),
+#'                                               data = FulanusPhysiology)))
 #'
 #' @export
 fit_curves <- function(
@@ -71,7 +71,7 @@ fit_curves <- function(
 
       # make appropriate predict for each method
 
-      output_list <- plyr::alply(args_mat, 1, function(y) { switch(class(x)[1],
+      output <- plyr::aaply(args_mat, 1, function(y) { switch(class(x)[1],
         glm = predict.glm(x, y, type = 'response'),
         lm = predict.lm(x, y, type = 'response'),
         nls = predict(x, y)[1],
@@ -81,7 +81,7 @@ fit_curves <- function(
       }
       )
 
-      unlist(output_list)
+      output
 
     } # close TPC function
 

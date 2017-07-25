@@ -16,7 +16,6 @@
 #' @param separator character. Character that separates variable names, years and scenarios.
 #' @param projection_model character. Projection model for future variables. Must be any model accepted in \code{raster::getData}
 #' @param reorder logical. If TRUE, will use last two characters of layer names in RasterStacks with 12 layers to order them in ascending order.
-#' @param reorder logical. If TRUE, reorders layers by last two characters in their names, after replacing letters for 0.
 #' @param download_source character. Where to download rasters from. Default is 'pkg-raster' which will get rasters from WorldClim, using package 'raster' functions.
 #' @param alert integer. Plays a sound alert when function is done running. See documentation of package beepr for description of sound options.
 #'

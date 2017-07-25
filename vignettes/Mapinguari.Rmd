@@ -256,7 +256,7 @@ Perf_rasters_list <- lapply(FulanusEcoRasters_future_temps, transform_rasters,
 
 Now, let's say the most crucial period for *Fulanus* population dynamics is their breeding period and they wil breed only under certain climatic conditions. This might cause their breeding period to vary spatially and temporally. In order to account for that, we can fit a logistic model of breeding status vs climate, using data from the table `FulanusBreeding`, which contain data on breeding status and climate at different localities. Then we can use this model to create binary rasters with the locations where Fulanus is breeding at each month, using function `transform_rasters`. After that, we can use the rasters generated as weights to average other variables. 
 
-```{r, fig.height = 6, fig.width = 6}
+```{r, fig.height = 6, fig.width = 6, eval = FALSE}
 
 Phen_model <- fit_curves(models = glm(breeding ~ prec, family = binomial(link = 'logit'), data = FulanusBreeding))
 
@@ -294,7 +294,7 @@ season_prec_rasters <-
 
 FulanusEcoRasters_season_prec <-
     transform_rasters(FulanusEcoRasters_present$present,
-      FUN_qlist = qlist(weighted.mean(tmax, weights = season_rain_rasters_binary)))
+      FUN_qlist = qlist(weighted.mean(tmax, weights = season_prec_rasters)))
 
 # Length of Breeding season
 plot(sum(season_prec_rasters))

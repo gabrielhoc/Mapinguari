@@ -38,8 +38,6 @@ get_rasters(raster_source = NULL, ext = c(-180, 180, -60, 90), margin = 0,
 \item{download_source}{character. Where to download rasters from. Default is 'pkg-raster' which will get rasters from WorldClim, using package 'raster' functions.}
 
 \item{alert}{integer. Plays a sound alert when function is done running. See documentation of package beepr for description of sound options.}
-
-\item{reorder}{logical. If TRUE, reorders layers by last two characters in their names, after replacing letters for 0.}
 }
 \value{
 Returns a list of raster stacks for the variables required, organized by year/scenario combination.

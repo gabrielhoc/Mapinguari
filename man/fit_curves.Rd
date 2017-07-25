@@ -23,11 +23,11 @@ Returns a list with a table of statistics for model comparision, and a list for 
 
 library(mgcv)
 
-  fit_curves(FUN_qlist = qlist(tpc_size = gamm(performance ~ s(temp, bs = 'cs') + size,
-                                               random = list(id = ~ 1),
-                                               data = FulanusPhysiology),
-                               tpc_no_size = gamm(performance ~ s(temp, bs = 'cs'),
-                                                  random = list(id = ~ 1)),
-                                                  data = FulanusPhysiology))
+  fit_curves(models = list(tpc_size = gamm(performance ~ s(temp, bs = 'cs') + size,
+                                           random = list(id = ~ 1),
+                                           data = FulanusPhysiology),
+                           tpc_no_size = gamm(performance ~ s(temp, bs = 'cs'),
+                                              random = list(id = ~ 1),
+                                              data = FulanusPhysiology)))
 
 }
