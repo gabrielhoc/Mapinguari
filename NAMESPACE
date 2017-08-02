@@ -2,9 +2,11 @@
 
 export(AETFUN)
 export(PETFUN)
+export(clean_points)
 export(daylengthFUN)
 export(fit_curves)
 export(get_rasters)
+export(pseudoabsences)
 export(qlist)
 export(rhFUN)
 export(sradFUN)

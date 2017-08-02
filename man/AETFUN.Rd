@@ -2,22 +2,20 @@
 % Please edit documentation in R/standardFUNs.R
 \name{AETFUN}
 \alias{AETFUN}
-\title{Applies Duncan Golicher's Bucket model for Actual Evapotranspiration}
+\title{Generates Actual EvapoTranspiration rasters}
 \usage{
 AETFUN(PET, prec)
 }
 \arguments{
-\item{tmax}{RasterStack or RasterLayer. Any raster representative of the are you want daylengths to.}
+\item{PET}{RasterStack with 12 layers. Total month Potential EvapoTranspiration rasters.}
 
-\item{tmin}{RasterStack or RasterLayer. Any raster representative of the are you want daylengths to.}
-
-\item{alt}{RasterStack or RasterLayer. Any raster representative of the are you want daylengths to.}
+\item{prec}{RasterStack with 12 layers. Total month precipitation rasters.}
 }
 \value{
-Returns a RasterStack with 12 layers, one for each month, containing information on the duration of the day at each pixel.
+Returns a RasterLayer with estimates of Actual EvapoTranspiration in milimiters.
 }
 \description{
-\code{AET} Get model predictions for a raster stack
+\code{AETFUN} Applies Duncan Golicher's Bucket model to Potential EvapoTranspiration and precipitation rasters in order to get Actual Evapotranspiration estimates for an area.
 }
 \examples{
 
@@ -32,9 +30,14 @@ FulanusEcoRasters_present <-
     reorder = TRUE)
 
 alt <- FulanusEcoRasters_present$present$alt
-tmax <- FulanusEcoRasters_present$present$tmax_1/10
-tmin <- FulanusEcoRasters_present$present$tmin_1/10
+tmax <- FulanusEcoRasters_present$present[[25:36]]/10
+tmin <- FulanusEcoRasters_present$present[[13:24]]/10
+prec <- FulanusEcoRasters_present$present[[1:12]]
 
-PETFUN(tmax, tmin, alt)
+PET <- PETFUN(tmax, tmin, alt)
+
+AETFUN(PET, prec)
+
+AETFUN(PET, prec)
 
 }

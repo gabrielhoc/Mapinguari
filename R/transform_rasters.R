@@ -5,7 +5,7 @@
 #' @param raster_stack RasterStack. Stack with environmental layers.
 #' @param FUN_qlist list. A list of unevaluated expressions, as created by function qlist.
 #' @param separator character. Character that separates variable names, years and scenarios.
-#' @param alert integer. Plays a sound alert when function is done running. See documentation of package beepr for description of sound options.
+#' @param alert integer. Plays a sound alert when function is done running. See documentation of package \code{beepr} for description of sound options.
 #'
 #' @return Returns a RasterStack with layers for the predictions required.
 #'
@@ -60,9 +60,9 @@ transform_rasters <- function(raster_stack,
   for (i in 1:length(separate_list)) assign(names(separate_list)[i], separate_list[[i]])
 
   output <-
-    lapply(FUN_qlist, function(x){
+    lapply(FUN_qlist, function(ww){
 
-      FUN_list <- as.list(x)
+      FUN_list <- as.list(ww)
 
       actualFUN <- eval(FUN_list[[1]])
 
@@ -72,7 +72,7 @@ transform_rasters <- function(raster_stack,
         lapply(list(FUN_list[-1]), eval, parent.frame(n = 2))
   }
 
-      isRaster <- lapply(arguments, function(y) class(eval(y)) == 'RasterStack' | class(eval(y)) == 'RasterLayer') %>% unlist()
+      isRaster <- lapply(arguments, function(y) class(eval(y)) == 'RasterStack' | class(eval(y)) == 'RasterLayer' | class(eval(y)) == 'RasterBrick') %>% unlist()
 
       raster_args <- lapply(arguments[isRaster], eval)
       args_stack <- raster::stack(raster_args)
@@ -80,22 +80,24 @@ transform_rasters <- function(raster_stack,
 
       raster_lengths <- unlist(lapply(raster_args, raster::nlayers))
 
-      adaptedFUN <- function(y, lengths, args, .FUN){
+      durations <- lapply(raster_lengths, function(z) 1:z)
+      start_ind <- lapply(1:length(raster_lengths), function(i) sum(raster_lengths[1:i][-i]))
 
-        call_list_rasters <-
-          lapply(lengths, function(z){
+      index_list <- lapply(1:length(raster_lengths), function(i) start_ind[[i]] + durations[[i]])
 
-            y[1:z]
+      adaptedFUN <- function(yy, args, .FUN){
 
-          })
+          call_list_rasters <-
+            lapply(index_list, function(z) yy[z])
 
-        call_list <- append(call_list_rasters, args)
+          names(call_list_rasters) <- names(raster_args)
 
-        do.call(what = .FUN, args = call_list)
+          call_list <- append(call_list_rasters, args)
+
+          do.call(what = .FUN, args = call_list)
 
       }
 
-      formals(adaptedFUN)$lengths <- raster_lengths
       formals(adaptedFUN)$args <- other_args
       formals(adaptedFUN)$.FUN <- actualFUN
 
@@ -108,7 +110,7 @@ transform_rasters <- function(raster_stack,
 
       raster::endCluster()
 
-      names(transformed_rasters) <- ifelse(names(transformed_rasters) == 'layer', paste(paste(x), collapse = separator), names(transformed_rasters))
+      names(transformed_rasters) <- ifelse(names(transformed_rasters) == 'layer', paste(paste(ww), collapse = separator), names(transformed_rasters))
 
       transformed_rasters
 

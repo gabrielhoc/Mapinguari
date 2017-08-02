@@ -19,7 +19,8 @@ Suggests:
     knitr,
     rmarkdown,
     testthat,
-    mgcv
+    mgcv,
+    EcoHydRology
 VignetteBuilder: knitr
 Imports: 
     magrittr,

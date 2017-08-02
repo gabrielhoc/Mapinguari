@@ -1,6 +1,6 @@
-#' Gets average month daylengths for an area
+#' Gets average month day lengths for an area
 #'
-#' \code{daylengthFUN} Get model predictions for a raster stack
+#' \code{daylengthFUN} Generates surfaces with information on day length for each month accross an area.
 #'
 #' @param reference_raster RasterStack or RasterLayer. Any raster representative of the are you want daylengths to.
 #'
@@ -89,15 +89,15 @@ rhFUN <- function(temp, vapor) {
 
 }
 
-#' Gets average month daylengths for an area
+#' Wrapper around \code{PET_fromTemp} function from package \code{EcoHydrology}
 #'
-#' \code{PETFUN} Get model predictions for a raster stack
+#' \code{PETFUN} Gets Potential EvapoTranspiration (PET) rasters from maximum temperature, minimum temperature and altitude rasters by applying function \code{PET_fromTemp} from package \code{EcoHydrology}
 #'
-#' @param tmax RasterStack or RasterLayer. Any raster representative of the are you want daylengths to.
-#' @param tmin RasterStack or RasterLayer. Any raster representative of the are you want daylengths to.
-#' @param alt RasterStack or RasterLayer. Any raster representative of the are you want daylengths to.
+#' @param tmax Raster* object. Maximum temperature raster.
+#' @param tmin Raster* object. Minimum temperature raster.
+#' @param alt Raster* object. Altitude raster.
 #'
-#' @return Returns a RasterStack with 12 layers, one for each month, containing information on the duration of the day at each pixel.
+#' @return Returns a RasterLayer with estimates of Potential EvapoTranspiration in milimiters.
 #'
 #' @examples
 #'
@@ -112,14 +112,16 @@ rhFUN <- function(temp, vapor) {
 #'     reorder = TRUE)
 #'
 #' alt <- FulanusEcoRasters_present$present$alt
-#' tmax <- FulanusEcoRasters_present$present$tmax_1/10
-#' tmin <- FulanusEcoRasters_present$present$tmin_1/10
+#' tmax <- FulanusEcoRasters_present$present[[25:36]]/10
+#' tmin <- FulanusEcoRasters_present$present[[13:24]]/10
 #'
-#' PETFUN(tmax, tmin, alt)
+#' PET <- PETFUN(tmax, tmin, alt)
 #'
 #' @export
 
-PETFUN <- function(tmax, tmin, alt, forest = 0) {
+PETFUN <- function(tmax, tmin, alt) {
+
+  forest = 0 # set this as an argument later
 
   lat_rad <- alt
   raster::values(lat_rad) <- raster::values(raster::init(tmax, 'y')) * pi/180
@@ -129,36 +131,36 @@ PETFUN <- function(tmax, tmin, alt, forest = 0) {
 
   day <- (30 * 1:12) - 15
 
-  tmax_values <- raster::values(tmax)
-  tmin_values <- raster::values(tmin)
-  slope_values <- raster::values(slope)
-  aspect_values <- raster::values(aspect)
-  lat_values <- raster::values(lat_rad)
+  PET_output <-
+    lapply(1:12, function(k) {
 
-  if (class(forest) == 'RasterStack' | class(forest) == 'RasterLayer') {
+      tmax_values <- raster::values(tmax[[k]])
+      tmin_values <- raster::values(tmin[[k]])
+      slope_values <- raster::values(slope)
+      aspect_values <- raster::values(aspect)
+      lat_values <- raster::values(lat_rad)
 
-    forest_values <- raster::values(forest)
+      if (class(forest) == 'RasterStack' | class(forest) == 'RasterLayer') {
 
-  } else {
+        forest_values <- raster::values(forest)
 
-    forest_values <- rep(forest, length(tmax_values))
+      } else {
 
-  }
+        forest_values <- rep(forest, length(tmax_values))
 
-  tmax_values[is.na(tmax_values)] <- 0
-  tmin_values[is.na(tmin_values)] <- 0
-  slope_values[is.na(slope_values)] <- 0
-  lat_values[is.na(lat_values)] <- 0
-  aspect_values[is.na(aspect_values)] <- 0
-  forest_values[is.na(forest_values)] <- 0
+      }
 
-  PET_raster <- alt
+      tmax_values[is.na(tmax_values)] <- 0
+      tmin_values[is.na(tmin_values)] <- 0
+      slope_values[is.na(slope_values)] <- 0
+      lat_values[is.na(lat_values)] <- 0
+      aspect_values[is.na(aspect_values)] <- 0
+      forest_values[is.na(forest_values)] <- 0
 
-  PET_list <-
-    lapply(day, function(x) {
+      PET_raster <- alt
 
       PET_values <-
-        EcoHydRology::PET_fromTemp(Jday = rep(x, length(tmax_values)),
+        EcoHydRology::PET_fromTemp(Jday = rep(day[k], length(tmax_values)),
           Tmax_C = tmax_values,
           Tmin_C = tmin_values,
           lat_radians = lat_values,
@@ -172,21 +174,19 @@ PETFUN <- function(tmax, tmin, alt, forest = 0) {
 
     })
 
-  names(PET_list) <- paste("PET", 1:12, sep = "_")
+      names(PET_output) <- paste("PET", 1:12, sep = "_")
 
-  return(raster::stack(PET_list))
-
+      raster::stack(PET_output)
 }
 
-#' Applies Duncan Golicher's Bucket model for Actual Evapotranspiration
+#' Generates Actual EvapoTranspiration rasters
 #'
-#' \code{AET} Get model predictions for a raster stack
+#' \code{AETFUN} Applies Duncan Golicher's Bucket model to Potential EvapoTranspiration and precipitation rasters in order to get Actual Evapotranspiration estimates for an area.
 #'
-#' @param tmax RasterStack or RasterLayer. Any raster representative of the are you want daylengths to.
-#' @param tmin RasterStack or RasterLayer. Any raster representative of the are you want daylengths to.
-#' @param alt RasterStack or RasterLayer. Any raster representative of the are you want daylengths to.
+#' @param PET RasterStack with 12 layers. Total month Potential EvapoTranspiration rasters.
+#' @param prec RasterStack with 12 layers. Total month precipitation rasters.
 #'
-#' @return Returns a RasterStack with 12 layers, one for each month, containing information on the duration of the day at each pixel.
+#' @return Returns a RasterLayer with estimates of Actual EvapoTranspiration in milimiters.
 #'
 #' @examples
 #'
@@ -201,10 +201,15 @@ PETFUN <- function(tmax, tmin, alt, forest = 0) {
 #'     reorder = TRUE)
 #'
 #' alt <- FulanusEcoRasters_present$present$alt
-#' tmax <- FulanusEcoRasters_present$present$tmax_1/10
-#' tmin <- FulanusEcoRasters_present$present$tmin_1/10
+#' tmax <- FulanusEcoRasters_present$present[[25:36]]/10
+#' tmin <- FulanusEcoRasters_present$present[[13:24]]/10
+#' prec <- FulanusEcoRasters_present$present[[1:12]]
 #'
-#' PETFUN(tmax, tmin, alt)
+#' PET <- PETFUN(tmax, tmin, alt)
+#'
+#' AETFUN(PET, prec)
+#'
+#' AETFUN(PET, prec)
 #'
 #' @export
 #'
@@ -245,15 +250,15 @@ AETFUN <- function(PET, prec) {
 
 }
 
-#' Applies Duncan Golicher's Bucket model for Actual Evapotranspiration
+#' Wrapper around \code{Solar} function from package \code{EcoHydrology}
 #'
-#' \code{AET} Get model predictions for a raster stack
+#' \code{sradFUN} Gets estimates of solar radiation for an area, based on maximum and minimum temperatures and altitude rasters by applying function \code{Solar} from package \code{EcoHydrology}
 #'
-#' @param tmax RasterStack or RasterLayer. Any raster representative of the are you want daylengths to.
-#' @param tmin RasterStack or RasterLayer. Any raster representative of the are you want daylengths to.
-#' @param alt RasterStack or RasterLayer. Any raster representative of the are you want daylengths to.
+#' @param tmax Raster* object. Maximum temperature raster.
+#' @param tmin Raster* object. Minimum temperature raster.
+#' @param alt Raster* object. Altitude raster.
 #'
-#' @return Returns a RasterStack with 12 layers, one for each month, containing information on the duration of the day at each pixel.
+#' @return Returns a RasterLayer with estimates of Solar in kiloJoules by square meter by day.
 #'
 #' @examples
 #' FulanusEcoRasters_present <-
@@ -274,7 +279,9 @@ AETFUN <- function(PET, prec) {
 #'
 #' @export
 
-sradFUN <- function(alt, tmax, tmin, forest = 0) {
+sradFUN <- function(alt, tmax, tmin) {
+
+  forest = 0 # set this as an argument later
 
   lat_rad <- alt
   raster::values(lat_rad) <- raster::values(raster::init(tmax, 'y')) * pi/180
@@ -319,7 +326,7 @@ sradFUN <- function(alt, tmax, tmin, forest = 0) {
 
       raster::values(solar_r) <- Es_Solar * 30
 
-      solar_output[[i]] <- solar_r
+      solar_output[[k]] <- solar_r
     })
 
   names(solar_output) <- paste("srad", 1:12, sep = "_")

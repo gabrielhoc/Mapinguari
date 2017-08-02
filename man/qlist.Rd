@@ -7,7 +7,7 @@
 qlist(...)
 }
 \arguments{
-\item{...}{expressions, possibly named}
+\item{...}{expressions, possibly named.}
 }
 \value{
 Returns the expressions inputed (unevaluated) as a list.

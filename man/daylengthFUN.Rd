@@ -2,7 +2,7 @@
 % Please edit documentation in R/standardFUNs.R
 \name{daylengthFUN}
 \alias{daylengthFUN}
-\title{Gets average month daylengths for an area}
+\title{Gets average month day lengths for an area}
 \usage{
 daylengthFUN(reference_raster)
 }
@@ -13,7 +13,7 @@ daylengthFUN(reference_raster)
 Returns a RasterStack with 12 layers, one for each month, containing information on the duration of the day at each pixel.
 }
 \description{
-\code{daylengthFUN} Get model predictions for a raster stack
+\code{daylengthFUN} Generates surfaces with information on day length for each month accross an area.
 }
 \examples{
 

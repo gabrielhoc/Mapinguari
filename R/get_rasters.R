@@ -23,14 +23,14 @@
 #'
 #' @examples
 #'
-#' Fulanus_Ecorasters_download <-
-#'   get_rasters(
-#'     ext = FulanusDistribution,
-#'     margin = 5,
-#'     non_fixed_var = c('prec', 'tmin', 'tmax'),
-#'     years = c("present", '2050', '2070'),
-#'     scenarios = c('rcp26', 'rcp45', 'rcp85'),
-#'     alert = 6)
+#'# Fulanus_Ecorasters_download <-
+#'#   get_rasters(
+#'#     ext = FulanusDistribution,
+#'#     margin = 5,
+#'#     non_fixed_var = c('prec', 'tmin', 'tmax'),
+#'#     years = c("present", '2050', '2070'),
+#'#     scenarios = c('rcp26', 'rcp45', 'rcp85'),
+#'#     alert = 6)
 #'
 #' Fulanus_Ecorasters_dir <-
 #'   get_rasters(

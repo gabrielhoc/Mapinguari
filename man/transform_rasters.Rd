@@ -13,7 +13,7 @@ transform_rasters(raster_stack, FUN_qlist, separator = "_", alert = NULL)
 
 \item{separator}{character. Character that separates variable names, years and scenarios.}
 
-\item{alert}{integer. Plays a sound alert when function is done running. See documentation of package beepr for description of sound options.}
+\item{alert}{integer. Plays a sound alert when function is done running. See documentation of package \code{beepr} for description of sound options.}
 }
 \value{
 Returns a RasterStack with layers for the predictions required.

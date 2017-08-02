@@ -2,22 +2,22 @@
 % Please edit documentation in R/standardFUNs.R
 \name{PETFUN}
 \alias{PETFUN}
-\title{Gets average month daylengths for an area}
+\title{Wrapper around \code{PET_fromTemp} function from package \code{EcoHydrology}}
 \usage{
 PETFUN(tmax, tmin, alt, forest = 0)
 }
 \arguments{
-\item{tmax}{RasterStack or RasterLayer. Any raster representative of the are you want daylengths to.}
+\item{tmax}{Raster* object. Maximum temperature raster.}
 
-\item{tmin}{RasterStack or RasterLayer. Any raster representative of the are you want daylengths to.}
+\item{tmin}{Raster* object. Minimum temperature raster.}
 
-\item{alt}{RasterStack or RasterLayer. Any raster representative of the are you want daylengths to.}
+\item{alt}{Raster* object. Altitude raster.}
 }
 \value{
-Returns a RasterStack with 12 layers, one for each month, containing information on the duration of the day at each pixel.
+Returns a RasterLayer with estimates of Potential EvapoTranspiration in milimiters.
 }
 \description{
-\code{PETFUN} Get model predictions for a raster stack
+\code{PETFUN} Gets Potential EvapoTranspiration (PET) rasters from maximum temperature, minimum temperature and altitude rasters by applying function \code{PET_fromTemp} from package \code{EcoHydrology}
 }
 \examples{
 
@@ -32,9 +32,9 @@ FulanusEcoRasters_present <-
     reorder = TRUE)
 
 alt <- FulanusEcoRasters_present$present$alt
-tmax <- FulanusEcoRasters_present$present$tmax_1/10
-tmin <- FulanusEcoRasters_present$present$tmin_1/10
+tmax <- FulanusEcoRasters_present$present[[25:36]]/10
+tmin <- FulanusEcoRasters_present$present[[13:24]]/10
 
-PETFUN(tmax, tmin, alt)
+PET <- PETFUN(tmax, tmin, alt)
 
 }

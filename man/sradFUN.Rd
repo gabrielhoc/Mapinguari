@@ -2,22 +2,22 @@
 % Please edit documentation in R/standardFUNs.R
 \name{sradFUN}
 \alias{sradFUN}
-\title{Applies Duncan Golicher's Bucket model for Actual Evapotranspiration}
+\title{Wrapper around \code{Solar} function from package \code{EcoHydrology}}
 \usage{
 sradFUN(alt, tmax, tmin, forest = 0)
 }
 \arguments{
-\item{alt}{RasterStack or RasterLayer. Any raster representative of the are you want daylengths to.}
+\item{alt}{Raster* object. Altitude raster.}
 
-\item{tmax}{RasterStack or RasterLayer. Any raster representative of the are you want daylengths to.}
+\item{tmax}{Raster* object. Maximum temperature raster.}
 
-\item{tmin}{RasterStack or RasterLayer. Any raster representative of the are you want daylengths to.}
+\item{tmin}{Raster* object. Minimum temperature raster.}
 }
 \value{
-Returns a RasterStack with 12 layers, one for each month, containing information on the duration of the day at each pixel.
+Returns a RasterLayer with estimates of Solar in kiloJoules by square meter by day.
 }
 \description{
-\code{AET} Get model predictions for a raster stack
+\code{sradFUN} Gets estimates of solar radiation for an area, based on maximum and minimum temperatures and altitude rasters by applying function \code{Solar} from package \code{EcoHydrology}
 }
 \examples{
 FulanusEcoRasters_present <-

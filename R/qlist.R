@@ -2,7 +2,7 @@
 #'
 #' \code{qlist} is similar to \code{quote}, but takes multiple arguments and returns them, (unevaluated) as a list.
 #'
-#' @param ... expressions, possibly named
+#' @param ... expressions, possibly named.
 #'
 #' @return Returns the expressions inputed (unevaluated) as a list.
 #'

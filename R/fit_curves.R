@@ -31,14 +31,14 @@ fit_curves <- function(
   if (is.null(names(models))) names(models) <- paste("model", 1:length(models), sep = separator)
 
   model_stats <-
-    lapply(models, function(x) {
+    lapply(models, function(xx) {
 
-      if (any(class(x) == 'gamm')) x <- x$lme
+      if (any(class(xx) == 'gamm')) xx <- xx$lme
 
       list(
-        AIC = stats::AIC(x),
-        BIC = stats::BIC(x),
-        logLik = stats::logLik(x)
+        AIC = try(stats::AIC(xx), silent = TRUE),
+        BIC = try(stats::BIC(xx), silent = TRUE),
+        logLik = try(stats::logLik(xx), silent = TRUE)
       ) # close list
 
     }
@@ -46,15 +46,15 @@ fit_curves <- function(
 
   # predict functions
 
-  predict_list <- lapply(models, function(x){
+  predict_list <- lapply(models, function(xx){
 
-    if (any(class(x) == 'gamm')) x <- x$gam
+    if (any(class(xx) == 'gamm')) xx <- xx$gam
 
     if (is.null(predict_formals)) {
-      predict_formals <-
-        x$formula %>%
+      try(predict_formals <-
+        xx$formula %>%
         all.vars() %>%
-        `[`(-1)
+        `[`(-1), silent = TRUE)
     }
 
     if (is.null(predict_formals)) stop("Please input `predict_formals`")
@@ -63,29 +63,31 @@ fit_curves <- function(
 
     names(predict_formals_list) <- predict_formals
 
-    TPC_function <- function() {
+    TPC_function <- function(...) {
 
-      args_mat <- do.call(data.frame, as.list(environment()))
+      args_mat <- do.call(data.frame, append(as.list(environment()), list(...)))
 
-      #output_list <- plyr::alply(args_mat, 1, function(y) stats::predict(x, y, type = 'response'))
+      output <- lapply(1:nrow(args_mat), function(i) {
 
-      # make appropriate predict for each method
+        zzz <- as.data.frame(args_mat[i, ])
+        names(zzz) <- names(args_mat)
 
-      output <- plyr::aaply(args_mat, 1, function(y) { switch(class(x)[1],
-        glm = predict.glm(x, y, type = 'response'),
-        lm = predict.lm(x, y, type = 'response'),
-        nls = predict(x, y)[1],
-        gam = predict.gam(x, y, type = 'response'),
-        gamm = predict.gam(x, y, type = 'response'),
-        predict(x, y))
-      }
-      )
+        switch(class(xx)[1],
+          glm = predict.glm(xx, newdata = zzz, type = "response", ...),
+          lm = predict.lm(xx, newdata = zzz, type = "response", ...),
+          nls = predict(xx, newdata = zzz, ...)[1],
+          gam = mgcv::predict.gam(xx, newdata = zzz, type = "response", ...),
+          gamm = mgcv::predict.gam(xx, newdata = zzz, type = "response", ...),
+          gbm = gbm::predict.gbm(xx, newdata = zzz, type = "response", ...),
+          randomForest = randomForest::predict.randomForest(xx, newdata = zzz, type = "response", ...),
+          predict(xx, newdata = zzz, type = "response", ...))
+      })
 
-      output
+      unlist(output)
 
     } # close TPC function
 
-    formals(TPC_function) <- predict_formals_list
+    formals(TPC_function) <-  append(predict_formals_list, formals(TPC_function))
 
     TPC_function
 
@@ -99,11 +101,19 @@ fit_curves <- function(
   BIC <- unlist(lapply(model_stats, function(x) x$BIC))
   logLik <- unlist(lapply(model_stats, function(x) x$logLik))
 
-  dAIC <- AIC - min(AIC)
-  dBIC <- BIC - min(BIC)
+  dAIC <- try(AIC - min(AIC), silent = TRUE)
+  dBIC <- try(BIC - min(BIC), silent = TRUE)
 
-  rankAIC <- rank(dAIC)
-  rankBIC <- rank(dBIC)
+  rankAIC <- try(rank(dAIC), silent = TRUE)
+  rankBIC <- try(rank(dBIC), silent = TRUE)
+
+  if (class(logLik) == 'try-error' | class(logLik) == 'character') logLik <- NA
+  if (class(AIC) == 'try-error' | class(AIC) == 'character') AIC <- NA
+  if (class(BIC) == 'try-error' | class(BIC) == 'character') BIC <- NA
+  if (class(dAIC) == 'try-error' | class(dAIC) == 'character') dAIC <- NA
+  if (class(dBIC) == 'try-error' | class(dBIC) == 'character') dBIC <- NA
+  if (class(rankAIC) == 'try-error' | class(rankAIC) == 'character') rankAIC <- NA
+  if (class(rankBIC) == 'try-error' | class(rankBIC) == 'character') rankBIC <- NA
 
   output_stats <-
     data.frame(logLik = logLik, AIC = AIC, BIC = BIC, dAIC, dBIC, rankAIC, rankBIC)
