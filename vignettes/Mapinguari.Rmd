@@ -595,7 +595,7 @@ FulanusDistribution_clean <-
 
 ## SDM
 
-```{r, eval = FALSE, echo = FALSE}
+```{r}
 
 prec_stack <- FulanusEcoRasters_present$present[[1:12]]
 tmin_stack <- FulanusEcoRasters_present$present[[13:24]]
@@ -628,77 +628,201 @@ values_abs$presence <- 0
 
 pres_abs_table <- rbind(values_pres, values_abs)
 
-SDM_Fulanus1 <- 
-fit_curves(list(
-  glm(presence ~ HA + HR + perf + breed + PET + CWD, data = pres_abs_table, family = "binomial"),
-  glm(presence ~ HA + HR + perf + breed + PET, data = pres_abs_table, family = "binomial"),
-  glm(presence ~ HA + HR + perf + breed + CWD, data = pres_abs_table, family = "binomial"),
-  glm(presence ~ HA + HR + perf + PET + CWD, data = pres_abs_table, family = "binomial"),
-  glm(presence ~ HA + HR + breed + PET + CWD, data = pres_abs_table, family = "binomial"),
-  glm(presence ~ HA + perf + breed + PET + CWD, data = pres_abs_table, family = "binomial"),
-  glm(presence ~ HR + perf + breed + PET + CWD, data = pres_abs_table, family = "binomial")))
-  
-SDM_Fulanus2 <- 
-fit_curves(list(
-  glm(presence ~ HA + HR + perf + breed + PET, data = pres_abs_table, family = "binomial"),
-  glm(presence ~ HA + HR + perf + breed, data = pres_abs_table, family = "binomial"),
-  glm(presence ~ HA + HR + perf + PET, data = pres_abs_table, family = "binomial"),
-  glm(presence ~ HA + HR + breed + PET, data = pres_abs_table, family = "binomial"),
-  glm(presence ~ HA + perf + breed + PET, data = pres_abs_table, family = "binomial"),
-  glm(presence ~ HR + perf + breed + PET, data = pres_abs_table, family = "binomial")))
-
-SDM_Fulanus3 <- 
-fit_curves(list(
-  glm(presence ~ HA + HR + perf + PET, data = pres_abs_table, family = "binomial"),
-  glm(presence ~ HA + HR + perf, data = pres_abs_table, family = "binomial"),
-  glm(presence ~ HA + HR + PET, data = pres_abs_table, family = "binomial"),
-  glm(presence ~ HA + perf + PET, data = pres_abs_table, family = "binomial"),
-  glm(presence ~ HR + perf + PET, data = pres_abs_table, family = "binomial")))
-
-SDM_Fulanus4 <- 
-fit_curves(list(
-  glm(presence ~ HA + HR + perf, data = pres_abs_table, family = "binomial"),
-  glm(presence ~ HA + HR, data = pres_abs_table, family = "binomial"),
-  glm(presence ~ HA + perf, data = pres_abs_table, family = "binomial"),
-  glm(presence ~ HR + perf, data = pres_abs_table, family = "binomial")))
-
-SDM_Fulanus5 <- 
-fit_curves(list(
-  glm(presence ~ HA + HR, data = pres_abs_table, family = "binomial"),
-  glm(presence ~ HA, data = pres_abs_table, family = "binomial"),
-  glm(presence ~ HR, data = pres_abs_table, family = "binomial")))
-  
-SDM_predict <- SDM_Fulanus5$model_1$predict
-
-SDM_projection <-
-transform_rasters(total_stack, FUN_qlist = qlist(SDM_predict(HA, HR)))
-
-raster::plot(SDM_projection)
-
-# GBM e RF
-
-SDM_FulanusGBMRF <- 
-fit_curves(list(
-  gbm(presence ~ HA + HR + perf + breed + PET + CWD, data = pres_abs_table),
-  randomForest(presence ~ HA + HR + perf + breed + PET, data = pres_abs_table)))
-  
-GBM_predict <- SDM_FulanusGBMRF$model_1$predict
-RF_predict<- SDM_FulanusGBMRF$model_2$predict
-
-GBM_projection <-
-transform_rasters(total_stack, FUN_qlist = qlist(GBM_predict(HA, HR, perf, breed, PET, CWD)))
-
-raster::plot(GBM_projection)
-
-RF_projection <-
-transform_rasters(total_stack, FUN_qlist = qlist(RF_predict(HA, HR, perf, breed, PET, CWD)))
-
-raster::plot(RF_projection)
-
 ```
+
+##Colinearity test
 
 ```{r}
 
-print("That's all for now")
+library(car)
+library(dismo)
 
+# Select 1000 random points from mask
+set.seed(22111962)
+mask <- total_stack[[1]]
+rnd.points <- dismo::randomPoints(mask, 1000)
+plot(!is.na(mask), legend = F)
+points(rnd.points, cex = 0.5)
+
+# Principal Components Analysis (PCA) of environmental variables
+env.data <- raster::extract(total_stack, rnd.points)
+pca.env.data <- princomp(env.data, cor = T)
+plot(pca.env.data)
+biplot(pca.env.data, pc.biplot = T)
+summary(pca.env.data)
+pca.env.data$loadings[, 1:3]
+
+# Variance Inflation Factors (VIF) of environmental variables
+library(usdm)
+v1 <- usdm::vifcor(total_stack, th = 0.9) #correlation
+v1
+v2 <- usdm::vifstep(total_stack, th = 10) #VIF
+v2
+
+# Subset environmental stack
+env.selected <- exclude(total_stack, v2) #exclude collinear variables identified with vifstep
+env.selected
+
+# Pairs plot of selected environmental predictors
+env.data.std <- data.frame(scale(env.data)) # Scale variables
+library(corrplot)
+M <- cor(env.data.std[, c("alt", "bio2", "bio3","bio8","bio9","bio13","bio14", "bio15", "bio18", "bio19")])
+corrplot::corrplot.mixed(M, upper="ellipse", lower="number")
+```
+
+## Make SDM
+
+```{r}
+
+############################################
+## FIT SPECIES DISTRIBUTION MODELS - SDMS ##
+############################################
+
+library(biomod2)
+
+occurrence.resp <-  rep(1, length(M.atticolus.training$lon))
+
+# Prepare data
+MatticolusBiomodData_PA_equal <- BIOMOD_FormatingData(
+	resp.var = occurrence.resp,
+	expl.var = env.selected,
+	resp.xy = M.atticolus.training,
+	resp.name = "Occurrence",
+	PA.nb.rep = 10,
+	PA.nb.absences = 35,
+	PA.strategy = "sre",
+	PA.sre.quant = 0.025)
+MatticolusBiomodData_PA_equal
+
+MatticolusBiomodData_PA_10000 <- BIOMOD_FormatingData(
+	resp.var = occurrence.resp,
+	expl.var = env.selected,
+	resp.xy = M.atticolus.training,
+	resp.name = "Occurrence",
+	PA.nb.rep = 10,
+	PA.nb.absences = 10000,
+	PA.strategy = "sre",
+	PA.sre.quant = 0.025)
+MatticolusBiomodData_PA_10000
+
+
+# Path to MAXENT
+myBiomodOption <- BIOMOD_ModelingOptions(MAXENT.Phillips = list(path_to_maxent.jar = "C:/Users/Vitor/Documents/R/win-library/3.3/dismo/java", memory_allocated = 1024))
+myBiomodOption <- BIOMOD_ModelingOptions(MAXENT.Phillips = list(path_to_maxent.jar = "/Users/vitorhugolacerdacavalcante/Library/R/3.3/library/dismo/java", memory_allocated = 1024))
+myBiomodOption <- BIOMOD_ModelingOptions(MAXENT.Phillips = list(path_to_maxent.jar = "C:/Users/izabellapaim/Documents/R/win-library/3.3/dismo/java", memory_allocated = 1024))
+myBiomodOption <- BIOMOD_ModelingOptions(MAXENT.Phillips = list(path_to_maxent.jar = "/Users/guarinoonleptophis/Library/R/3.3/library/dismo/java", memory_allocated = 1024))
+myBiomodOption <- BIOMOD_ModelingOptions()# When MAXENT is not necessary
+
+# Parallel processing
+library(doParallel)
+cl <- doParallel::makeCluster(4) # number of cores in computer
+registerDoParallel(cl)
+
+# models = c("GLM","GAM","GBM","CTA","ANN","SRE","FDA","MARS","RF","MAXENT.Phillips","MAXENT.Tsuruoka"),
+# Modeling: machine learning methods (using default options)
+# myBiomodOptions_PA_equal <- BIOMOD_ModelingOptions(GBM = NULL,
+#	CTA = NULL,
+#	RF = NULL)
+
+MatticolusModelOut_PA_equal <- BIOMOD_Modeling(MatticolusBiomodData_PA_equal,
+	models = c("RF"),
+	models.options = myBiomodOption,
+	NbRunEval = 10,
+	DataSplit = 75,
+	Prevalence = NULL,
+	VarImport = 0,
+	models.eval.meth = c("KAPPA","TSS","ROC","ACCURACY","BIAS"),
+	SaveObj = TRUE,
+	rescal.all.models = FALSE,
+	do.full.models = FALSE,
+	modeling.id = "Matticolus")
+
+# Modeling: machine learning methods (using default options)
+# myBiomodOptions_PA_10000 <- BIOMOD_ModelingOptions(GLM = NULL,
+#	GAM = NULL,
+#	ANN = NULL,
+#	SRE = NULL,
+#	FDA = NULL,
+#	MARS = NULL,
+#	MAXENT.Phillips = NULL,
+#	MAXENT.Tsuruoka = NULL)
+
+MatticolusModelOut_PA_10000 <- BIOMOD_Modeling(
+	MatticolusBiomodData_PA_10000,
+	models = c("GLM","GAM","ANN","SRE","FDA","MARS","MAXENT.Phillips","MAXENT.Tsuruoka"),
+	models.options = myBiomodOption,
+	NbRunEval = 10,
+	DataSplit = 75,
+	Prevalence = NULL,
+	VarImport = 0,
+	models.eval.meth = c("KAPPA","TSS","ROC","ACCURACY","BIAS"),
+	SaveObj = TRUE,
+	rescal.all.models = FALSE,
+	do.full.models = FALSE,
+	modeling.id = "Matticolus")
+
+```
+
+## Model evaluation
+
+```{r}
+###################################
+## EVALUATE MODELS USING BIOMOD2 ##
+###################################
+
+# Get evaluations
+MatticolusModelEval_PA_equal <- get_evaluations(MatticolusModelOut_PA_equal)
+MatticolusModelEval_PA_10000 <- get_evaluations(MatticolusModelOut_PA_10000)
+
+# Print ROC scores of all selected models
+MatticolusModelEval_PA_equal["ROC","Testing.data",,,]
+
+# Get summaries (mean) of model evaluation: one model (MAXENT.Tsuruoka), one method (TSS)
+dimnames(MatticolusModelEval_PA_10000)
+MAXENT.Tsuruoka_Eval <- MatticolusModelEval_PA_10000["TSS","Testing.data","MAXENT.Tsuruoka",,]
+mean(MAXENT.Tsuruoka_Eval)
+
+# Get summaries (mean) of model evaluation: one model (GLM), all methods
+mean(MatticolusModelEval_PA_10000["KAPPA","Testing.data","GLM",,])
+mean(MatticolusModelEval_PA_10000["TSS","Testing.data","GLM",,])
+mean(MatticolusModelEval_PA_10000["ROC","Testing.data","GLM",,])
+mean(MatticolusModelEval_PA_10000["ACCURACY","Testing.data","GLM",,])
+mean(MatticolusModelEval_PA_10000["BIAS","Testing.data","GLM",,])
+
+# Get summaries (mean) of model evaluation: machine-learning models, all methods
+sdm.models <- c("GBM","CTA","RF") #3 models
+eval.methods <- c("KAPPA","TSS","ROC","ACCURACY","BIAS") #5 evaluation methods
+
+means.i <- numeric(0)
+means.j <- numeric(5)
+for (i in 1:3) {
+	for (j in 1:5) {
+	means.j[j] <- mean(MatticolusModelEval_PA_equal[paste(eval.methods[j]),"Testing.data",paste(sdm.models[i]),,])
+	}
+	means.i <- c(means.i, means.j)
+}
+
+summary.eval.equal <- data.frame(rep(sdm.models,each = 5), rep(eval.methods,3), means.i)
+names(summary.eval.equal) <- c("Model", "Method", "Mean")
+summary.eval.equal
+xtabs(summary.eval.equal$Mean ~ summary.eval.equal$Model + summary.eval.equal$Method) #RF with best performance
+
+
+# Get summaries (mean) of model evaluation: regression models, all methods
+sdm.models <- c("GLM","GAM","ANN","SRE","FDA","MARS","MAXENT.Phillips","MAXENT.Tsuruoka") #8 models
+eval.methods <- c("KAPPA","TSS","ROC","ACCURACY","BIAS") #5 evaluation methods
+
+means.i <- numeric(0)
+means.j <- numeric(5)
+for (i in 1:8) {
+	for (j in 1:5) {
+	means.j[j] <- mean(MatticolusModelEval_PA_10000[paste(eval.methods[j]),"Testing.data",paste(sdm.models[i]),,], na.rm = T)
+	}
+	means.i <- c(means.i, means.j)
+}
+
+summary.eval.10000 <- data.frame(rep(sdm.models,each = 5), rep(eval.methods,8), means.i)
+names(summary.eval.10000) <- c("Model", "Method", "Mean")
+summary.eval.10000
+xtabs(summary.eval.10000$Mean ~ summary.eval.10000$Model + summary.eval.10000$Method) #MAXENT.Phillips with best performance
 ```
