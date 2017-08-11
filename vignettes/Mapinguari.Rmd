@@ -30,7 +30,7 @@ library(Mapinguari)
 
 Next, we are going to give an example of how to use the package, using some simulated data:
 
-# The fate of *Fulanus*
+## The fate of *Fulanus*
 
 *Fulanus beltranus* is a fictional species of lizard from Democratic Republic of Congo. We would like to find out how this species is going to do in different climate change scenarios. First let's look at the points where it is currently known to occurr. To access the table with distribution data `FulanusDistribution`, package Mapinguari has to be loaded. Here we use ggmap to plot the points over a image from Google Maps (copyright Google).
 
@@ -40,7 +40,7 @@ Next, we are going to give an example of how to use the package, using some simu
 head(FulanusDistribution)
 ```
 
-```{r, message = FALSE, warning = FALSE, fig.height = 6, fig.width = 6, eval = FALSE}
+```{r, message = FALSE, warning = FALSE, fig.height = 6, fig.width = 6}
 # Load ggmap and ggplot2 to make the map
 library(ggmap)
 library(ggplot2)
@@ -90,15 +90,15 @@ head(FulanusDistribution_clean)
 
 Let's plot those points on the map.
 
-```{r}
+```{r, fig.height = 6, fig.width = 6}
 
-#library(ggmap)
+library(ggmap)
 
-#ggmap(Fulanus_big) +
-#  geom_point(data = FulanusDistribution_clean, 
-#    mapping = aes(x = Lon, y = Lat), 
-#    size = 1, 
-#    colour = 'red')
+ggmap(Fulanus_big) +
+  geom_point(data = FulanusDistribution_clean, 
+    mapping = aes(x = Lon, y = Lat), 
+    size = 1, 
+    colour = 'red')
 ```
 
 Now, let's get some information on the climate of this region.
@@ -167,9 +167,7 @@ Function `transform_rasters` allows us to apply any vectorized function to any s
 Fulanus_present_year_summaries <-
    transform_rasters(FulanusEcoRasters_present$present,
     FUN_qlist = qlist(tmax_average_year = mean(tmax),
-                      tmax_sd_year = sd(tmax), 
                       tmin_average_year = mean(tmin),
-                      tmin_sd_year = sd(tmin),
                       prec_total_year = sum(prec)))
 
 # The function operates in RasterStacks, if you want to apply it to a list, you can use `lapply`:
@@ -257,28 +255,27 @@ Note, however, that the variables on the rasters used need to be on the same sca
 
 ```{r, message = FALSE, warning = FALSE, fig.height = 6, fig.width = 6}
 
-# Let's scale the tmin and tmax average layers
-FulanusEcoRasters_present_temps <- Fulanus_present_year_summaries[[c(1,3)]]/10
-
 # You can calculate the performance for minimum and maximum temperatures, by changing the term on the expression inside FUN_qlist
 
+# We are dividing the temperatures by 10, so they are on the same scale as the data used to fit the models
+
 Perf_rasters_tmax <-
-  transform_rasters(raster_stack = FulanusEcoRasters_present_temps,
-                    FUN_qlist = qlist(perf_tmax = my_tpc(tmax, size = mean(FulanusPhysiology$size))))
+  transform_rasters(raster_stack = Fulanus_present_year_summaries,
+                    FUN_qlist = qlist(perf_tmax = my_tpc(tmax/10, size = mean(FulanusPhysiology$size))))
 
 Perf_rasters_tmin <-
-  transform_rasters(raster_stack = FulanusEcoRasters_present_temps,
-                    FUN_qlist = qlist(perf_tmin = my_tpc(tmin, size = mean(FulanusPhysiology$size))))
+  transform_rasters(raster_stack = Fulanus_present_year_summaries,
+                    FUN_qlist = qlist(perf_tmin = my_tpc(tmin/10, size = mean(FulanusPhysiology$size))))
 
 # We can get the performance for individuals of different ages by changing the `size` argument on the my_tpc function (lizards' ages are highly correlated with size)
 
 Perf_rasters_young <-
-  transform_rasters(raster_stack = FulanusEcoRasters_present_temps,
-                    FUN_qlist = qlist(perf_young = my_tpc(tmax, size = min(FulanusPhysiology$size))))
+  transform_rasters(raster_stack = Fulanus_present_year_summaries,
+                    FUN_qlist = qlist(perf_young = my_tpc(tmax/10, size = min(FulanusPhysiology$size))))
 
 Perf_rasters_old <-
-  transform_rasters(raster_stack = FulanusEcoRasters_present_temps,
-                    FUN_qlist = qlist(perf_old = my_tpc(tmax, size = max(FulanusPhysiology$size))))
+  transform_rasters(raster_stack = Fulanus_present_year_summaries,
+                    FUN_qlist = qlist(perf_old = my_tpc(tmax/10, size = max(FulanusPhysiology$size))))
 
 plot(Perf_rasters_tmax$perf_tmax)
 plot(Perf_rasters_tmin$perf_tmin)
@@ -289,11 +286,10 @@ plot(Perf_rasters_old$perf_old)
 The function operates in RasterStacks, if you want to apply it to a list, you can use `lapply`:
 
 ```{r, eval = FALSE, message = FALSE, warning = FALSE, fig.height = 6, fig.width = 6}
-# First, scale the temperature rasters for future projections
-FulanusEcoRasters_future_temps <- lapply(Fulanus_future_year_summaries, function(x) x[[1:2]]/10)
 
-Perf_rasters_list <- lapply(FulanusEcoRasters_future_temps, transform_rasters,
-  FUN_qlist = qlist(perf_tmin = my_tpc(tmin, size = mean(FulanusPhysiology$size))))
+Perf_rasters_list <- lapply(Fulanus_future_year_summaries, transform_rasters,
+  FUN_qlist = qlist(perf_tmin = my_tpc(tmin/10, size = mean(FulanusPhysiology$size))))
+
 ```
 
 ## Calculating hours of activity
@@ -339,7 +335,7 @@ head(microclimate_by_day)
 
 Then we can relate HA to the temperature measured at the weather station, which is equivalent to the temperature at the WorldClim rasters we have already. This assumes microhabitats are similar accross the species range. Hours of activity should be bound between two values, zero and length of the day, so logistic models would be appropriate for fitting this. We are going to use package `FlexParamCurve`, which allows us to fit many variations of a logistic models, such as Gompertz, Von Bertalannfy and Richards curves.
 
-```{r}
+```{r, results = 'hide'}
 library(FlexParamCurve)
 
 # Set options for Gompertz curve
@@ -383,11 +379,11 @@ HARichards <- nls(HA ~ SSposnegRichards(temp_air_avg, Asym, K, Infl, M, modno = 
 
 It seems the Von Bertalannfy curve was the best one.
 
-```{r}
+```{r, fig.height = 6, fig.width = 6}
 HA_VB <- HA_curve$Von_Bertalannfy$predict
 
 HA_raster_present <-
-  transform_rasters(raster_stack = FulanusEcoRasters_present$present,
+  transform_rasters(raster_stack = Fulanus_present_year_summaries,
     FUN_qlist = qlist(HA = HA_VB(tmax/10)))
 
 plot(HA_raster_present)
@@ -395,7 +391,9 @@ plot(HA_raster_present)
 
 ## Other environmental raster
 
-Mapinguari can generate other potentially useful rasters that are not species specific, such as hydrologic variables like potential evapotranspiration, actual evapotranspiration and climatic water deficit.
+Mapinguari can generate other potentially useful rasters that are not species specific, such as hydrologic variables like potential evapotranspiration (PET), actual evapotranspiration (AEt) and climatic water deficit.
+
+In order to calculate AET, we need the PET layers in monthly resolution, so we are using the monthly layers instead of the year averages.
 
 ```{r, fig.height = 6, fig.width = 6, message = FALSE, warning = FALSE}
 
@@ -406,11 +404,11 @@ alt_stack <- FulanusEcoRasters_present$present$alt
 
 # Potential EvapoTranspiration
 PET_stack <-
-PETFUN(tmax = tmax_stack, 
-       tmin = tmin_stack, 
+PETFUN(tmax = tmax_stack/10, 
+       tmin = tmin_stack/10, 
        alt = alt_stack)
 
-raster::plot(PET_stack)
+plot(mean(PET_stack))
 ```
 
 ```{r, fig.height = 6, fig.width = 6, message = FALSE, warning = FALSE}
@@ -418,7 +416,7 @@ raster::plot(PET_stack)
 AET_stack <-
 AETFUN(PET = PET_stack, prec = prec_stack)
 
-raster::plot(AET_stack)
+plot(mean(AET_stack))
 ```
 
 ```{r, fig.height = 6, fig.width = 6, message = FALSE, warning = FALSE}
@@ -428,81 +426,65 @@ raster::plot(AET_stack)
 CWD_stack <- PET_stack - AET_stack
 names(CWD_stack) <- paste("CWD", 1:12, sep = "_")
 
-raster::plot(CWD_stack)
+plot(mean(CWD_stack))
 ```
 
 You can also get day length values for the area, by inputing any raster for the area desired.
 
 ```{r, fig.height = 6, fig.width = 6, message = FALSE, warning = FALSE}
-
-# day length
-
 daylength_stack <- daylengthFUN(CWD_stack)
+
+plot(mean(daylength_stack))
 ```
 
-# Including microclimate variation on our physiological variables
+Another useful variable is the amount of Solar Radiation, in kiloJoules by square meter by day.
 
-Previously, we estimated hours of activity assuming homogenous microhabitats. However, microhabitats, and thus microclimates, are likely to change according to the structure of the vegetation. Many vegetation indexes, such as EVI and NDVI are based on satellite images, and therefore, are hard to extrapolate for the future. Luckily for us, aridity measures such as CWD are good approximations of vegetation structure. We can incorporate this information on our hours of activity models.
+```{r, fig.height = 6, fig.width = 6, message = FALSE, warning = FALSE}
+srad_stack <- sradFUN(alt_stack, tmax_stack/10, tmin_stack/10)
+
+plot(mean(srad_stack))
+```
+
+## Including microclimate variation on our physiological variables
+
+Previously, we estimated hours of activity assuming homogenous microhabitats. However, microhabitats, and thus microclimates, are likely to change according to the structure of the vegetation. Many vegetation indexes, such as EVI and NDVI are based on satellite images, and therefore, are hard to extrapolate for the future. Luckily for us, AET is a good approximation of vegetation distribution. We can incorporate this information on our hours of activity models.
 
 ```{r, fig.height = 6, fig.width = 6}
 
-# let's include a new column in the table with CWD
-microclimate_by_day$CWD <- raster::extract(mean(CWD_stack), data.frame(Lon = microclimate_by_day$Lon, Lat = microclimate_by_day$Lat))
+# let's include a new column in the table with AET
+microclimate_by_day$AET <- extract(mean(AET_stack), data.frame(Lon = microclimate_by_day$Lon, Lat = microclimate_by_day$Lat))
 
-# Let's try fitting a curve with CWD
+# Let's try fitting a curve with AET
 
-HAlogisticCWD <- try(nls(HA ~ SSlogis(temp_air_avg + CWD, Asym, xmid, scal), data = microclimate_by_day))
+HAlogisticAET <- try(nls(HA ~ SSlogis(temp_air_avg + AET, Asym, xmid, scal), data = microclimate_by_day))
 
-HAGompertzCWD <- try(nls(HA ~ SSposnegRichards(temp_air_avg + CWD, Asym, K, Infl, modno = 32, pn.options = "G_options"), data = microclimate_by_day))
+HAGompertzAET <- try(nls(HA ~ SSposnegRichards(temp_air_avg + AET, Asym, K, Infl, modno = 32, pn.options = "G_options"), data = microclimate_by_day))
 
-HAVonBertalannfyCWD <- try(nls(HA ~ SSposnegRichards(temp_air_avg + CWD, Asym, K, Infl, modno = 32, pn.options = "VB_options"), data = microclimate_by_day))
+HAVonBertalannfyAET <- try(nls(HA ~ SSposnegRichards(temp_air_avg + AET, Asym, K, Infl, modno = 32, pn.options = "VB_options"), data = microclimate_by_day))
 
-HARichardsCWD <- try(nls(HA ~ SSposnegRichards(temp_air_avg + CWD, Asym, K, Infl, M, modno = 12, pn.options = "R_options"), data = microclimate_by_day))
+HARichardsAET <- try(nls(HA ~ SSposnegRichards(temp_air_avg + AET, Asym, K, Infl, M, modno = 12, pn.options = "R_options"), data = microclimate_by_day))
 ```
 
-It seems the only algorithm able to converge was a simple logistic, so let's use that.
+It seems that only the simple logistic and Gomperts were able to converge, so let's use those.
 
-```{r}
-HA_CWD_curve <- 
-fit_curves(HAlogisticCWD,
-  predict_formals = c("temp_air_avg", "CWD"))
+```{r, fig.height = 6, fig.width = 6}
+HA_AET_curve <- 
+fit_curves(list(HAlogisticAET,
+                HAGompertzAET),
+  predict_formals = c("temp_air_avg", "AET"))
 
-HAlogis <- HA_CWD_curve$model_1$predict
+HAlogis <- HA_AET_curve$model_1$predict
 
 # Let's join CWD to hour climatic stack
 
-FulanusEcoRasters_present_CWD <- FulanusEcoRasters_present
-FulanusEcoRasters_present_CWD$present <- stack(FulanusEcoRasters_present$present, CWD_stack)
+FulanusEcoRasters_present_AET <- FulanusEcoRasters_present
+FulanusEcoRasters_present_AET$present <- stack(FulanusEcoRasters_present$present, AET_stack)
 
 HA_raster_present <-
-  transform_rasters(raster_stack = FulanusEcoRasters_present_CWD$present,
-    FUN_qlist = qlist(HA = HAlogis(tmax, CWD)))
+  transform_rasters(raster_stack = FulanusEcoRasters_present_AET$present,
+    FUN_qlist = qlist(HA = HAlogis(tmax, AET)))
 
 plot(mean(HA_raster_present))
-```
-
-
-## get performace considering microhabitat temperatures
-
-We used WorldClim temperatures to estimate performance accross the distribution of our species. Those temperatures are more akin to those measured at weather station. A more precise way to do it might be using estimates of microhabitat temperature. We have microhabitat temperatures from our `FulanusMicroclimate` dataset, which we can use to create a model relating microhabitat temperature to air temperature and vegetation and extrapolate it.
-
-```{r, fig.height = 6, fig.width = 6}
-
-microtemp_model <-
-fit_curves(glm(temp_micro_avg ~ temp_air_avg + CWD, data = microclimate_by_day))
-
-predict_microtemp <- microtemp_model$model_1$predict
-
-microtemp_raster_present <-
-  transform_rasters(raster_stack = FulanusEcoRasters_present_CWD$present,
-    FUN_qlist = qlist(microtemp = predict_microtemp(temp_air_avg = tmax/10, CWD = CWD))) 
-
-Perf_rasters_microtemp <-
-  transform_rasters(raster_stack = microtemp_raster_present,
-                    FUN_qlist = qlist(perf_microtemp = my_tpc(microtemp, 
-                                                              size = mean(FulanusPhysiology$size))))
-
-plot(mean(Perf_rasters_microtemp))
 ```
 
 ## Creating a function for the Sinervo method for hours of activity
@@ -539,15 +521,9 @@ SinervoHA_vectorized <- Vectorize(SinervoHA)
 SinervoHA(tmax = c(30, 40, 35), tmin = c(10, 20, 15), tlwr = 20, tupr = 30, res = 3)
 SinervoHA_vectorized(tmax = c(30, 40, 35), tmin = c(20, 30, 25), tlwr = 20, tupr = 30, res = 3)
 
-Fulanus_present_year_summaries_scaled <- Fulanus_present_year_summaries
-
-Fulanus_present_year_summaries_scaled$tmax_average_year <- Fulanus_present_year_summaries$tmax_average_year/10
-
-Fulanus_present_year_summaries_scaled$tmin_average_year <- Fulanus_present_year_summaries$tmin_average_year/10
-
 ha_sinervo_raster <- 
-transform_rasters(raster_stack = Fulanus_present_year_summaries_scaled, 
-                  FUN_qlist = qlist(SinervoHA_vectorized(tmax = tmax[[1]], tmin = tmin[[1]],  tlwr = 15, tupr = 25, res = 3)))
+transform_rasters(raster_stack = Fulanus_present_year_summaries, 
+                  FUN_qlist = qlist(SinervoHA_vectorized(tmax = tmax[[1]]/10, tmin = tmin[[1]]/10,  tlwr = 15, tupr = 25, res = 3)))
 
 # Let's cap the hours of activity by daylength
 
@@ -562,6 +538,30 @@ h_restriction <- average_daylength - ha_capped
 plot(ha_sinervo_raster)
 plot(ha_capped)
 plot(h_restriction)
+```
+
+## get performace considering microhabitat temperatures
+
+We used WorldClim temperatures to estimate performance accross the distribution of our species. Those temperatures are more akin to those measured at weather station. A more precise way to do it might be using estimates of microhabitat temperature. We have microhabitat temperatures from our `FulanusMicroclimate` dataset, which we can use to create a model relating microhabitat temperature to air temperature and AET then extrapolate it.
+
+```{r, fig.height = 6, fig.width = 6}
+microtemp_model <-
+fit_curves(glm(temp_micro_avg ~ temp_air_avg + AET, data = microclimate_by_day))
+```
+
+```{r, fig.height = 6, fig.width = 6}
+predict_microtemp <- microtemp_model$model_1$predict
+
+microtemp_raster_present <-
+  transform_rasters(raster_stack = FulanusEcoRasters_present_AET$present,
+    FUN_qlist = qlist(microtemp = predict_microtemp(temp_air_avg = tmax/10, AET = AET))) 
+
+Perf_rasters_microtemp <-
+  transform_rasters(raster_stack = microtemp_raster_present,
+                    FUN_qlist = qlist(perf_microtemp = my_tpc(microtemp, 
+                                                              size = mean(FulanusPhysiology$size))))
+
+plot(mean(Perf_rasters_microtemp))
 ```
 
 ## Summarizing accross spatially varying periods (geographical variation in phenology)
@@ -587,7 +587,6 @@ PhenFUN1 <- Phen_model$model_1$predict
 And then we extrapolate it.
 
 ```{r}
-
 season_rain_rasters <-
   transform_rasters(raster_stack = FulanusEcoRasters_present$present,
                     FUN_qlist = qlist(season_rain = PhenFUN1(prec)))
@@ -595,7 +594,7 @@ season_rain_rasters <-
 
 It makes sense for us to convert this to binary now, but leaving it as proportions would also work.
 
-```{r}
+```{r, fig.height = 6, fig.width = 6}
 # Let's convert the raster to binary
 
 season_rain_rasters_binary <-
@@ -609,13 +608,12 @@ FulanusEcoRasters_season_rain <-
 plot(sum(season_rain_rasters))
 
 # Average Performance during breeding season
-plot(FulanusEcoRasters_season_rain$weighted.mean_tmax_season_rain_rasters_binary)
+plot(FulanusEcoRasters_season_rain)
 ```
 
 The function can also be a condition. Let's say we are only interested on the periods when precipitation is bigger than 150.
 
 ```{r, fig.height = 6, fig.width = 6}
-
 PhenFUN2 <- function(x) ifelse(x > 150, 1, 0)
 
 season_prec_rasters <-
@@ -631,49 +629,26 @@ plot(sum(season_prec_rasters))
 
 # Average Performance during breeding season
 plot(FulanusEcoRasters_season_prec)
-
 ```
 
-## SDM
+## SDM (under development)
 
-```{r}
+##Colinearity test
 
-prec_stack <- FulanusEcoRasters_present$present[[1:12]]
-tmin_stack <- FulanusEcoRasters_present$present[[13:24]]
-tmax_stack <- FulanusEcoRasters_present$present[[25:36]]
-alt_stack <- FulanusEcoRasters_present$present$alt
+```{r, fig.height = 6, fig.width = 6}
+# group desired variables in a stack
 
-total_stack <- raster::stack(sum(prec_stack),
-                             mean(tmin_stack),
-                             mean(tmax_stack),
+total_stack <- stack(Fulanus_present_year_summaries,
                              alt_stack,
                              sum(PET_stack),
                              sum(AET_stack),
                              sum(CWD_stack),
                              ha_capped,
                              h_restriction, 
-                             Perf_rasters_microtemp,
+                             mean(Perf_rasters_microtemp),
                              sum(season_rain_rasters))
 
 names(total_stack) <- c("prec", "tmin", "tmax", "alt", "PET", "AET", "CWD", "HA", "HR", "perf", "breed")
-
-pres_coords <- FulanusDistribution_clean[1:2]
-
-pseudo_abs <- pseudoabsences(pres_coords, 150, 2000)
-
-values_pres <- data.frame(unlist(raster::extract(total_stack, pres_coords)))
-values_abs <- data.frame(unlist(raster::extract(total_stack, pseudo_abs)))
-
-values_pres$presence <- 1
-values_abs$presence <- 0
-
-pres_abs_table <- rbind(values_pres, values_abs)
-
-```
-
-##Colinearity test
-
-```{r}
 
 library(car)
 library(dismo)
@@ -681,23 +656,23 @@ library(dismo)
 # Select 1000 random points from mask
 set.seed(22111962)
 mask <- total_stack[[1]]
-rnd.points <- dismo::randomPoints(mask, 1000)
-plot(!is.na(mask), legend = F)
-points(rnd.points, cex = 0.5)
+rnd.points <- randomPoints(mask, 1000)
 
 # Principal Components Analysis (PCA) of environmental variables
-env.data <- raster::extract(total_stack, rnd.points)
+env.data <- extract(total_stack, rnd.points)
 pca.env.data <- princomp(env.data, cor = T)
 plot(pca.env.data)
 biplot(pca.env.data, pc.biplot = T)
 summary(pca.env.data)
 pca.env.data$loadings[, 1:3]
+```
 
+```{r, fig.height = 6, fig.width = 6}
 # Variance Inflation Factors (VIF) of environmental variables
 library(usdm)
-v1 <- usdm::vifcor(total_stack, th = 0.9) #correlation
+v1 <- vifcor(total_stack, th = 0.9) #correlation
 v1
-v2 <- usdm::vifstep(total_stack, th = 10) #VIF
+v2 <- vifstep(total_stack, th = 10) #VIF
 v2
 
 # Subset environmental stack
@@ -707,66 +682,49 @@ env.selected
 # Pairs plot of selected environmental predictors
 env.data.std <- data.frame(scale(env.data)) # Scale variables
 library(corrplot)
-M <- cor(env.data.std[, c("alt", "bio2", "bio3","bio8","bio9","bio13","bio14", "bio15", "bio18", "bio19")])
-corrplot::corrplot.mixed(M, upper="ellipse", lower="number")
+M <- cor(env.data.std[, names(env.data.std)])
+corrplot.mixed(M, upper = "ellipse", lower = "number")
+```
+
+## Generate presence absence table
+
+```{r}
+pres_coords <- FulanusDistribution_clean[1:2]
+
+pseudo_abs <- pseudoabsences(pres_coords, 150, 2000)
+
+values_pres <- data.frame(unlist(extract(env.selected, pres_coords)))
+values_abs <- data.frame(unlist(extract(env.selected, pseudo_abs)))
+
+values_pres$presence <- 1
+values_abs$presence <- 0
+
+pres_abs_table <- rbind(values_pres, values_abs)
 ```
 
 ## Make SDM
 
-```{r}
-
-############################################
-## FIT SPECIES DISTRIBUTION MODELS - SDMS ##
-############################################
-
+```{r, warning = FALSE, message = FALSE, results = 'hide'}
 library(biomod2)
 
-occurrence.resp <-  rep(1, length(M.atticolus.training$lon))
-
 # Prepare data
-MatticolusBiomodData_PA_equal <- BIOMOD_FormatingData(
-	resp.var = occurrence.resp,
-	expl.var = env.selected,
-	resp.xy = M.atticolus.training,
-	resp.name = "Occurrence",
-	PA.nb.rep = 10,
-	PA.nb.absences = 35,
-	PA.strategy = "sre",
-	PA.sre.quant = 0.025)
-MatticolusBiomodData_PA_equal
-
-MatticolusBiomodData_PA_10000 <- BIOMOD_FormatingData(
-	resp.var = occurrence.resp,
-	expl.var = env.selected,
-	resp.xy = M.atticolus.training,
-	resp.name = "Occurrence",
-	PA.nb.rep = 10,
-	PA.nb.absences = 10000,
-	PA.strategy = "sre",
-	PA.sre.quant = 0.025)
-MatticolusBiomodData_PA_10000
-
+FulanusBiomodData <- BIOMOD_FormatingData(
+	resp.var = pres_abs_table$presence,
+	expl.var = pres_abs_table[1:6],
+	resp.xy = rbind(pres_coords, pseudo_abs),
+	resp.name = "Fulanus")
+FulanusBiomodData
 
 # Path to MAXENT
-myBiomodOption <- BIOMOD_ModelingOptions(MAXENT.Phillips = list(path_to_maxent.jar = "C:/Users/Vitor/Documents/R/win-library/3.3/dismo/java", memory_allocated = 1024))
-myBiomodOption <- BIOMOD_ModelingOptions(MAXENT.Phillips = list(path_to_maxent.jar = "/Users/vitorhugolacerdacavalcante/Library/R/3.3/library/dismo/java", memory_allocated = 1024))
-myBiomodOption <- BIOMOD_ModelingOptions(MAXENT.Phillips = list(path_to_maxent.jar = "C:/Users/izabellapaim/Documents/R/win-library/3.3/dismo/java", memory_allocated = 1024))
-myBiomodOption <- BIOMOD_ModelingOptions(MAXENT.Phillips = list(path_to_maxent.jar = "/Users/guarinoonleptophis/Library/R/3.3/library/dismo/java", memory_allocated = 1024))
-myBiomodOption <- BIOMOD_ModelingOptions()# When MAXENT is not necessary
+myBiomodOption <- BIOMOD_ModelingOptions(MAXENT.Phillips = list(path_to_maxent.jar = "/Library/Frameworks/R.framework/Versions/3.3/Resources/library/dismo/java", memory_allocated = 1024))
 
 # Parallel processing
 library(doParallel)
-cl <- doParallel::makeCluster(4) # number of cores in computer
+cl <- makeCluster(4) # number of cores in computer
 registerDoParallel(cl)
 
-# models = c("GLM","GAM","GBM","CTA","ANN","SRE","FDA","MARS","RF","MAXENT.Phillips","MAXENT.Tsuruoka"),
-# Modeling: machine learning methods (using default options)
-# myBiomodOptions_PA_equal <- BIOMOD_ModelingOptions(GBM = NULL,
-#	CTA = NULL,
-#	RF = NULL)
-
-MatticolusModelOut_PA_equal <- BIOMOD_Modeling(MatticolusBiomodData_PA_equal,
-	models = c("RF"),
+FulanusModelOut <- BIOMOD_Modeling(FulanusBiomodData,
+	models = c("GBM","CTA","RF", "GLM","GAM","ANN","SRE","FDA","MARS","MAXENT.Phillips","MAXENT.Tsuruoka"),
 	models.options = myBiomodOption,
 	NbRunEval = 10,
 	DataSplit = 75,
@@ -776,59 +734,29 @@ MatticolusModelOut_PA_equal <- BIOMOD_Modeling(MatticolusBiomodData_PA_equal,
 	SaveObj = TRUE,
 	rescal.all.models = FALSE,
 	do.full.models = FALSE,
-	modeling.id = "Matticolus")
-
-# Modeling: machine learning methods (using default options)
-# myBiomodOptions_PA_10000 <- BIOMOD_ModelingOptions(GLM = NULL,
-#	GAM = NULL,
-#	ANN = NULL,
-#	SRE = NULL,
-#	FDA = NULL,
-#	MARS = NULL,
-#	MAXENT.Phillips = NULL,
-#	MAXENT.Tsuruoka = NULL)
-
-MatticolusModelOut_PA_10000 <- BIOMOD_Modeling(
-	MatticolusBiomodData_PA_10000,
-	models = c("GLM","GAM","ANN","SRE","FDA","MARS","MAXENT.Phillips","MAXENT.Tsuruoka"),
-	models.options = myBiomodOption,
-	NbRunEval = 10,
-	DataSplit = 75,
-	Prevalence = NULL,
-	VarImport = 0,
-	models.eval.meth = c("KAPPA","TSS","ROC","ACCURACY","BIAS"),
-	SaveObj = TRUE,
-	rescal.all.models = FALSE,
-	do.full.models = FALSE,
-	modeling.id = "Matticolus")
-
+	modeling.id = "Fulanus")
 ```
 
 ## Model evaluation
 
 ```{r}
-###################################
-## EVALUATE MODELS USING BIOMOD2 ##
-###################################
-
 # Get evaluations
-MatticolusModelEval_PA_equal <- get_evaluations(MatticolusModelOut_PA_equal)
-MatticolusModelEval_PA_10000 <- get_evaluations(MatticolusModelOut_PA_10000)
+FulanusModelEval <- get_evaluations(FulanusModelOut)
 
 # Print ROC scores of all selected models
-MatticolusModelEval_PA_equal["ROC","Testing.data",,,]
+FulanusModelEval["ROC","Testing.data",,,]
 
 # Get summaries (mean) of model evaluation: one model (MAXENT.Tsuruoka), one method (TSS)
-dimnames(MatticolusModelEval_PA_10000)
-MAXENT.Tsuruoka_Eval <- MatticolusModelEval_PA_10000["TSS","Testing.data","MAXENT.Tsuruoka",,]
+dimnames(FulanusModelEval)
+MAXENT.Tsuruoka_Eval <- FulanusModelEval["TSS","Testing.data","MAXENT.Tsuruoka",,]
 mean(MAXENT.Tsuruoka_Eval)
 
 # Get summaries (mean) of model evaluation: one model (GLM), all methods
-mean(MatticolusModelEval_PA_10000["KAPPA","Testing.data","GLM",,])
-mean(MatticolusModelEval_PA_10000["TSS","Testing.data","GLM",,])
-mean(MatticolusModelEval_PA_10000["ROC","Testing.data","GLM",,])
-mean(MatticolusModelEval_PA_10000["ACCURACY","Testing.data","GLM",,])
-mean(MatticolusModelEval_PA_10000["BIAS","Testing.data","GLM",,])
+mean(FulanusModelEval["KAPPA","Testing.data","GLM",,])
+mean(FulanusModelEval["TSS","Testing.data","GLM",,])
+mean(FulanusModelEval["ROC","Testing.data","GLM",,])
+mean(FulanusModelEval["ACCURACY","Testing.data","GLM",,])
+mean(FulanusModelEval["BIAS","Testing.data","GLM",,])
 
 # Get summaries (mean) of model evaluation: machine-learning models, all methods
 sdm.models <- c("GBM","CTA","RF") #3 models
@@ -838,7 +766,7 @@ means.i <- numeric(0)
 means.j <- numeric(5)
 for (i in 1:3) {
 	for (j in 1:5) {
-	means.j[j] <- mean(MatticolusModelEval_PA_equal[paste(eval.methods[j]),"Testing.data",paste(sdm.models[i]),,])
+	means.j[j] <- mean(FulanusModelEval[paste(eval.methods[j]),"Testing.data", paste(sdm.models[i]),,])
 	}
 	means.i <- c(means.i, means.j)
 }
@@ -846,8 +774,7 @@ for (i in 1:3) {
 summary.eval.equal <- data.frame(rep(sdm.models,each = 5), rep(eval.methods,3), means.i)
 names(summary.eval.equal) <- c("Model", "Method", "Mean")
 summary.eval.equal
-xtabs(summary.eval.equal$Mean ~ summary.eval.equal$Model + summary.eval.equal$Method) #RF with best performance
-
+xtabs(summary.eval.equal$Mean ~ summary.eval.equal$Model + summary.eval.equal$Method) #GBM with best performance
 
 # Get summaries (mean) of model evaluation: regression models, all methods
 sdm.models <- c("GLM","GAM","ANN","SRE","FDA","MARS","MAXENT.Phillips","MAXENT.Tsuruoka") #8 models
@@ -857,7 +784,7 @@ means.i <- numeric(0)
 means.j <- numeric(5)
 for (i in 1:8) {
 	for (j in 1:5) {
-	means.j[j] <- mean(MatticolusModelEval_PA_10000[paste(eval.methods[j]),"Testing.data",paste(sdm.models[i]),,], na.rm = T)
+	means.j[j] <- mean(FulanusModelEval[paste(eval.methods[j]),"Testing.data",paste(sdm.models[i]),,], na.rm = T)
 	}
 	means.i <- c(means.i, means.j)
 }
@@ -865,5 +792,19 @@ for (i in 1:8) {
 summary.eval.10000 <- data.frame(rep(sdm.models,each = 5), rep(eval.methods,8), means.i)
 names(summary.eval.10000) <- c("Model", "Method", "Mean")
 summary.eval.10000
-xtabs(summary.eval.10000$Mean ~ summary.eval.10000$Model + summary.eval.10000$Method) #MAXENT.Phillips with best performance
+xtabs(summary.eval.10000$Mean ~ summary.eval.10000$Model + summary.eval.10000$Method) #MARS with best performance
 ```
+
+## List of Mapinguari functions
+
+* `clean_points`
+* `fit_curves`
+* `get_rasters`
+* `pseudoabsences`
+* `qlist`
+* `transform_rasters`
+* `daylengthFUN`
+* `PETFUN`
+* `AETFUN`
+* `sradFUN`
+* `rhFUN`
