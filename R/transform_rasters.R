@@ -106,7 +106,9 @@ transform_rasters <- function(raster_stack,
 
       transformed_rasters <- try(raster::clusterR(x = args_stack, fun = raster::overlay,  args = list(fun = adaptedFUN)), silent = TRUE)
 
-      if (class(transformed_rasters) == 'try-error') raster::overlay(args_stack, fun = adaptedFUN)
+      if (class(transformed_rasters) == 'try-error') print("trying not parallelized version")
+
+      if (class(transformed_rasters) == 'try-error') transformed_rasters <- raster::overlay(args_stack, fun = adaptedFUN)
 
       raster::endCluster()
 
@@ -115,6 +117,8 @@ transform_rasters <- function(raster_stack,
       transformed_rasters
 
     })
+
+  for (i in 1:length(output)) { names(output[[i]]) <-  paste(names(FUN_qlist)[[i]], 1:raster::nlayers(output[[i]]), sep = separator) }
 
   if (!is.null(alert)) {beepr::beep(alert)}
 

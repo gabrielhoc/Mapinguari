@@ -11,7 +11,7 @@ vignette: >
 
 It is well documented that climate change has severe effects on biodiversity. Species distribution models or SDMs are popular tools for predicting individual species distributions and project the effects of climate change on those distributions, under different scenarios. Most SDMs are correlative and do not take into account biological processes underlying species responses to environmental variables. We aim to provide a modeling tool to fulfill this gap by estimating geographical layers with biologically relevant information that can be used in SDMs or other biogeographical analysis, as well as stimulating good practices in dealing with spatial autocorrelation, predictor selection, model evaluation, consensus and comparison. 
 
-Mapinguari is an add-on package for program R aimed at providing tools to facilitate the incorporation of biological processes in biogeographical analyses. It offers conveniences in fitting, comparing and extrapolating models of biological processes such as physiology, phenology, adaptation, interspecific interactions, demography and dispersal. These spatial extrapolations can be informative by themselves, but also complement traditional correlative SDM methods, by mixing purely environmental and process-based predictors.
+Mapinguari is a package for program R aimed at providing tools to facilitate the incorporation of biological processes in biogeographical analyses. It offers conveniences in fitting, comparing and extrapolating models of biological processes such as physiology, phenology, adaptation, interspecific interactions, demography and dispersal. These spatial extrapolations can be informative by themselves, but also complement traditional correlative SDM methods, by mixing environmental and process-based predictors.
 
 On this manual I will provide some examples of the kind of information that can be generated with Mapinguari, using a terrestrial ectotherm and processes relevant to those animals as examples, such as temperature limited activity times and locomotor performance. The spatial information that can be generated with the package is not limited to those presented here, and the same principles apply to generating surfaces relevant to other taxa, such as metabolic rates, time inside thermal neutral zone, photosyntesis, seed and egg development rates, etc.
 
@@ -23,10 +23,9 @@ The package is currently hosted on GitHub, this is how to install and load it:
 # You need package devtools to install packages from GitHub
 library(devtools)
 
-#install_github("gabrielhoc/Mapinguari")
-load_all(".")
+install_github("gabrielhoc/Mapinguari")
 
-#library(Mapinguari)
+library(Mapinguari)
 ```
 
 Next, we are going to give an example of how to use the package, using some simulated data:
@@ -34,6 +33,12 @@ Next, we are going to give an example of how to use the package, using some simu
 # The fate of *Fulanus*
 
 *Fulanus beltranus* is a fictional species of lizard from Democratic Republic of Congo. We would like to find out how this species is going to do in different climate change scenarios. First let's look at the points where it is currently known to occurr. To access the table with distribution data `FulanusDistribution`, package Mapinguari has to be loaded. Here we use ggmap to plot the points over a image from Google Maps (copyright Google).
+
+```{r}
+# First, let's take a look at FulanusDistribution
+
+head(FulanusDistribution)
+```
 
 ```{r, message = FALSE, warning = FALSE, fig.height = 6, fig.width = 6, eval = FALSE}
 # Load ggmap and ggplot2 to make the map
@@ -56,11 +61,51 @@ ggmap(Fulanus_big) +
     colour = 'red')
 ```
 
+## Cleaning points
+
+Some points might be too close to each other and be redundant, while other might be mistakenly placed in regions where the species is known not to occurr. Fulanus occurrs only in land and in altitudes below 1000 meters. Let's filter out points that are within 2 kilometers from each other, outside this altitude range or on the ocean. To get a altitude layer, we can use function `get_rasters`, which will be explained in further detail in the next section.
+
+```{r, message = FALSE, warning = FALSE, fig.height = 6, fig.width = 6}
+# First, we need an altitude raster.
+
+alt_list <- get_rasters(
+     raster_source = "/Users/gabriel/Documents/Mapinguari/global_grids_10_minutes",
+     ext = FulanusDistribution,
+     #non_fixed_var = c('prec', 'tmin', 'tmax'), # make this optional
+     fixed_var = 'alt')
+
+# Get the layer from the list
+alt <- alt_list[[1]]
+
+# Than, we clean the points
+
+FulanusDistribution_clean <- 
+ clean_points(coord = FulanusDistribution,
+   merge_dist = 2,
+   reference_layer = alt < 1000 & !is.na(alt), # Oceans are represented by NA on this altitude layer
+   layer_filter = 0)
+
+head(FulanusDistribution_clean)
+```
+
+Let's plot those points on the map.
+
+```{r}
+
+#library(ggmap)
+
+#ggmap(Fulanus_big) +
+#  geom_point(data = FulanusDistribution_clean, 
+#    mapping = aes(x = Lon, y = Lat), 
+#    size = 1, 
+#    colour = 'red')
+```
+
 Now, let's get some information on the climate of this region.
 
 ## Obtaining rasters
 
-We can use function `get_rasters` to extract WorldClim surfaces for that area. The argument `ext` tells us which is the area you desire to crop your rasters around. It accepts either a numerical vector with the coordinates of cropping limits (in order: western most longitude, easter most longitude, southern most latitude then northern most latitude), or a table of longitudes and latitudes, in which case it will grab the coordinates of the most extreme points and use those as the cropping limits. The argument `margin` adds to these limits, and it is on the same unit as the coordinates you supply.
+We can use function `get_rasters` to extract WorldClim surfaces for that area. The argument `ext` tells us which is the area you desire to crop your rasters around. It accepts either a numerical vector with the coordinates of cropping limits (in order: western most longitude, easter most longitude, southern most latitude then northern most latitude), or a table of longitudes (column named `Lon`) and latitudes (column named `Lat`), such as the `FulanusDistribution_clean` table we created previously. In this case, the function will grab the coordinates of the most extreme points and use those as the cropping limits. The argument `margin` adds to these limits, and it is on the same unit as the coordinates you supply.
 
 ```{r, message = FALSE, warning = FALSE, fig.height = 6, fig.width = 6}
 # library(Mapinguari)
@@ -69,7 +114,7 @@ library(raster)
 FulanusEcoRasters_present <-
    get_rasters(
      raster_source = "/Users/gabriel/Documents/Mapinguari/global_grids_10_minutes",
-     ext = FulanusDistribution,
+     ext = FulanusDistribution_clean,
      margin = 5,
      non_fixed_var = c('prec', 'tmin', 'tmax'),
      fixed_var = 'alt',
@@ -101,7 +146,7 @@ Let's try getting some projections for the future years of 2050 and 2070:
 FulanusEcoRasters_future <-
    get_rasters(
      raster_source = my_directory,
-     ext = FulanusDistribution,
+     ext = FulanusDistribution_clean,
      margin = 5,
      non_fixed_var = c('prec', 'tmin', 'tmax'),
      years = c('2050', '2070'),
@@ -152,7 +197,7 @@ Summary functions are an useful example, but we can apply more complex functions
 
 Function `fit_curves` can be used to compare models with different parameterizations or specifications for your biological processes. The user needs to inform a list of models in argument `models` and the function will output a table with their AIC, BIC, log likelihood, delta AIC, delta BIC and a rank for AIC and BIC values. The main goal of the function, however, is to create vectorized predict functions for each model, which can then be used in `transform_models` to spatially extrapolate the model. In order to make the spatial extrapolation possible, you must have spatial information for at least one of the variables on the right hand side of your model formula. The vectorized function generated can be used to get predictions of your model in contexts other than spatial, such as for time series or specific values.
 
-Back to *Fulanus*, we measured the maximum running speed of several individuals under different temperatures. We also recorded their body sizes, since that is a variable that is very likely to inffluence their performance. Here is how the data look like:
+Back to *Fulanus*, we measured the maximum running speed of several individuals under different temperatures. We also recorded their body sizes, since that variable is likely to inffluence their performance. Here is how the data look like:
 
 ```{r}
 head(FulanusPhysiology)
@@ -202,7 +247,7 @@ my_tpc(temp = 20, size = 3)
 my_tpc(temp = 20:40, size = 3)
 ```
 
-The predictor function can be applied to rasters of the variables on the right hand side of the model formula to spatialize the variable on the right hand side. On the next section we are going to give an example.
+The predictor function can be applied to rasters of the variables on the right hand side of the model formula to spatialize the variable on the left hand side. On the next section we are going to give an example.
 
 ## Spatialize a physiological model
 
@@ -251,56 +296,101 @@ Perf_rasters_list <- lapply(FulanusEcoRasters_future_temps, transform_rasters,
   FUN_qlist = qlist(perf_tmin = my_tpc(tmin, size = mean(FulanusPhysiology$size))))
 ```
 
-## Summarizing accross spatially varying periods (geographical variation in phenology)
+## Calculating hours of activity
 
-Now, let's say the most crucial period for *Fulanus* population dynamics is their breeding period and they will breed only under certain climatic conditions. This might cause their breeding period to vary spatially and temporally. In order to account for that, we can fit a logistic model of breeding status vs climate, using data from the table `FulanusBreeding`, which contain data on breeding status and climate at different localities. Then we can use this model to create binary rasters with the locations where Fulanus is breeding at each month, using function `transform_rasters`. After that, we can summary the climatic rasters only during the breeding season at different places, by using the binary rasters as weights to average other variables. 
+To make the performance raster we extrapolated a generalized additive mixed model (GAMM). We can use the same functions `fit_curves` and `transform_rasters` to create rasters from other kinds of modelling algorithms, such as non-least squares (NLS). The amount of time lizards are able to stay active seems to be a good predictor of their ability to persist in a locality (Sinervo et al, 2010). Here we are going to demonstrate how to estimate average daily hours of activity limited by temperature. The same framework could be applied to estimate amount of time inside temperature ranges important for other organisms, such as the thermal neutral zone of mammals or temperatures relevant to seed and egg development.
 
-```{r, fig.height = 6, fig.width = 6}
+In order to know how much time Fulanus lizards are able to perform their activities, first we need to know the temperature range in which they are active. Measuring the temperature of active lizards in the field, we found that they were active with body temperatures between 16 and 28 degrees Celsius. Next, we have to gather data on how temprature varies in the microhabitats those lizards use. We deployed physical models with similar thermal properties to the lizards in the microhabitats lizards were observed performing their activities. Those models were connected to data loggers that registered their temperature every four minutes. We also recorded the air temperature at a nearby weather station for every day the models were out. The table `FulanusMicroclimate` contains this (simulated) data.
 
-Phen_model <- fit_curves(models = glm(breeding ~ prec, family = binomial(link = 'logit'), data = FulanusBreeding))
-
-PhenFUN1 <- Phen_model$model_1$predict
-
-season_rain_rasters <-
-  transform_rasters(raster_stack = FulanusEcoRasters_present$present,
-                    FUN_qlist = qlist(season_rain = PhenFUN1(prec)))
-
-# Let's convert the raster to binary
-
-season_rain_rasters_binary <-
-  calc(season_rain_rasters, function(x) ifelse(x < 0.5, 0, 1))
-
-FulanusEcoRasters_season_rain <-
-    transform_rasters(FulanusEcoRasters_present$present,
-      FUN_qlist = qlist(weighted.mean(tmax, weights = season_rain_rasters_binary)))
-
-# Length of Breeding season
-plot(sum(season_rain_rasters))
-
-# Average Performance during breeding season
-plot(FulanusEcoRasters_season_rain$weighted.mean_tmax_season_rain_rasters_binary)
+```{r}
+head(FulanusMicroclimate)
 ```
 
-The function can also be a condition. Let's say we are only interested on the periods when precipitation is bigger than 150.
+Next, we are going to create a new column in the table with a binary variable, indicating if at each moment, the temperature registered for the models was inside the activity range for Fulanus or not.
 
-```{r, fig.height = 6, fig.width = 6}
+```{r, fig.height = 6, fig.width = 6, warning = FALSE, message = FALSE, results = 'hide'}
+# Summarise microclimate table by day
+#make this into a function
 
-PhenFUN2 <- function(x) ifelse(x > 150, 1, 0)
+library(dplyr)
 
-season_prec_rasters <-
+# Fulanus only has activity on microhabitats between 16 and 28 degrees celsius
+
+FulanusMicroclimate$HA <- ifelse(FulanusMicroclimate$temp > 16 & FulanusMicroclimate$temp < 28, 1, 0)
+```
+
+If we sum `HA` for each day, we are going to get the amount of time the models were inside that temperature on each day.
+
+```{r}
+# First, let's summarise the data by day
+
+resolution_minutes <- 4 # data is logged every 4 minutes
+
+microclimate_by_day <- 
+group_by(FulanusMicroclimate, day, month, year) %>% 
+summarise(HA = sum(HA)/60/resolution_minutes, # converting to hours
+          temp_micro_avg = mean(temp),
+          temp_air_avg = mean(t_air),
+          Lon = unique(Lon), 
+          Lat = unique(Lat))
+
+head(microclimate_by_day)
+```
+
+Then we can relate HA to the temperature measured at the weather station, which is equivalent to the temperature at the WorldClim rasters we have already. This assumes microhabitats are similar accross the species range. Hours of activity should be bound between two values, zero and length of the day, so logistic models would be appropriate for fitting this. We are going to use package `FlexParamCurve`, which allows us to fit many variations of a logistic models, such as Gompertz, Von Bertalannfy and Richards curves.
+
+```{r}
+library(FlexParamCurve)
+
+# Set options for Gompertz curve
+
+modpar(x = microclimate_by_day$temp_air_avg, 
+       y = microclimate_by_day$HA, 
+       pn.options = "G_options")
+
+change.pnparameters(M = 0.1, pn.options = "G_options")
+
+# Set options for Von Bertanlannfy curve
+
+modpar(x = microclimate_by_day$temp_air_avg, 
+       y = microclimate_by_day$HA, 
+       pn.options = "VB_options")
+
+change.pnparameters(M = -0.3, pn.options = "VB_options")
+
+# Set options for Richards curve
+
+modpar(x = microclimate_by_day$temp_air_avg, 
+       y = microclimate_by_day$HA, 
+       pn.options = "R_options")
+
+HAlogistic <- nls(HA ~ SSlogis(temp_air_avg, Asym, xmid, scal), data = microclimate_by_day) # A simple logistic
+
+HAGompertz <- nls(HA ~ SSposnegRichards(temp_air_avg, Asym, K, Infl, modno = 32, pn.options = "G_options"), data = microclimate_by_day)
+
+HAVonBertalannfy <- nls(HA ~ SSposnegRichards(temp_air_avg, Asym, K, Infl, modno = 32, pn.options = "VB_options"), data = microclimate_by_day)
+
+HARichards <- nls(HA ~ SSposnegRichards(temp_air_avg, Asym, K, Infl, M, modno = 12, pn.options = "R_options"), data = microclimate_by_day)
+
+ HA_curve <- 
+   fit_curves(list(logistic = HAlogistic, 
+                   Gompertz = HAGompertz,
+                   Von_Bertalannfy = HAVonBertalannfy,
+                   Richards = HARichards), 
+              predict_formals = "temp_air_avg",
+              separator = "_")
+```
+
+It seems the Von Bertalannfy curve was the best one.
+
+```{r}
+HA_VB <- HA_curve$Von_Bertalannfy$predict
+
+HA_raster_present <-
   transform_rasters(raster_stack = FulanusEcoRasters_present$present,
-    FUN_qlist = qlist(season_rain = PhenFUN2(prec)))
+    FUN_qlist = qlist(HA = HA_VB(tmax/10)))
 
-FulanusEcoRasters_season_prec <-
-    transform_rasters(FulanusEcoRasters_present$present,
-      FUN_qlist = qlist(weighted.mean(tmax, weights = season_prec_rasters)))
-
-# Length of Breeding season
-plot(sum(season_prec_rasters))
-
-# Average Performance during breeding season
-plot(FulanusEcoRasters_season_prec)
-
+plot(HA_raster_present)
 ```
 
 ## Other environmental raster
@@ -324,13 +414,11 @@ raster::plot(PET_stack)
 ```
 
 ```{r, fig.height = 6, fig.width = 6, message = FALSE, warning = FALSE}
-
 # Actual EvapoTranspiration
 AET_stack <-
 AETFUN(PET = PET_stack, prec = prec_stack)
 
 raster::plot(AET_stack)
-
 ```
 
 ```{r, fig.height = 6, fig.width = 6, message = FALSE, warning = FALSE}
@@ -343,164 +431,71 @@ names(CWD_stack) <- paste("CWD", 1:12, sep = "_")
 raster::plot(CWD_stack)
 ```
 
+You can also get day length values for the area, by inputing any raster for the area desired.
+
 ```{r, fig.height = 6, fig.width = 6, message = FALSE, warning = FALSE}
 
 # day length
 
 daylength_stack <- daylengthFUN(CWD_stack)
-
 ```
 
-## Calculating hours of activity
+# Including microclimate variation on our physiological variables
 
-```{r}
-head(FulanusMicroclimate)
-```
-
-
-```{r, fig.height = 6, fig.width = 6, warning = FALSE, message = FALSE, results = 'hide'}
-# Summarise microclimate table by day
-#make this into a function
-
-library(dplyr)
-
-# Fulanus only has activity on microhabitats between 21 and 33 degrees celsius
-
-FulanusMicroclimate$HA <- ifelse(FulanusMicroclimate$temp > 16 & FulanusMicroclimate$temp < 28, 1, 0)
-
-# make safe check to see if every day is on the same temporal resolution
-
-resolution_minutes <- 4
-
-microclimate_by_day <- 
-group_by(FulanusMicroclimate, day, month, year) %>% 
-summarise(HA = sum(HA)/60/resolution_minutes,
-          temp_micro_avg = mean(temp),
-          temp_air_avg = mean(t_air),
-          Lon = unique(Lon), 
-          Lat = unique(Lat))
-
-# try to do with FlexParamCurve, instead of nls
-# for nls, we have to specify the formal arguments of the predict function, because the formula is weird
-
-library(FlexParamCurve)
-
-modpar(x = microclimate_by_day$temp_air_avg, 
-       y = microclimate_by_day$HA, 
-       pn.options = "G_options")
-
-change.pnparameters(M = 0.1, pn.options = "G_options")
-
-modpar(x = microclimate_by_day$temp_air_avg, 
-       y = microclimate_by_day$HA, 
-       pn.options = "VB_options")
-
-modpar(x = microclimate_by_day$temp_air_avg, 
-       y = microclimate_by_day$HA, 
-       pn.options = "R_options")
-
-change.pnparameters(M = -0.3, pn.options = "VB_options")
-
-HAlogistic <- nls(HA ~ SSlogis(temp_air_avg, Asym, xmid, scal), data = microclimate_by_day)
-HAGompertz <- nls(HA ~ SSposnegRichards(temp_air_avg, Asym, K, Infl, modno = 32, pn.options = "G_options"), data = microclimate_by_day)
-HAVonBertalannfy <- nls(HA ~ SSposnegRichards(temp_air_avg, Asym, K, Infl, modno = 32, pn.options = "VB_options"), data = microclimate_by_day)
-HARichards <- nls(HA ~ SSposnegRichards(temp_air_avg, Asym, K, Infl, M, modno = 12, pn.options = "R_options"), data = microclimate_by_day)
-```
+Previously, we estimated hours of activity assuming homogenous microhabitats. However, microhabitats, and thus microclimates, are likely to change according to the structure of the vegetation. Many vegetation indexes, such as EVI and NDVI are based on satellite images, and therefore, are hard to extrapolate for the future. Luckily for us, aridity measures such as CWD are good approximations of vegetation structure. We can incorporate this information on our hours of activity models.
 
 ```{r, fig.height = 6, fig.width = 6}
- HA_curve <- 
-   fit_curves(list(logistic = HAlogistic, 
-                   Gompertz = HAGompertz,
-                   Von_Bertalannfy = HAVonBertalannfy,
-                   Richards = HARichards), 
-              predict_formals = "temp_air_avg",
-              separator = "_")
- 
-HAlogis <- HA_curve$logistic$predict
-
-Fulanus_present_year_averages <-
-   transform_rasters(raster_stack = FulanusEcoRasters_present$present,
-    FUN_qlist = qlist(tmax_average = mean(tmax)))
-
-HA_raster_present <-
-  transform_rasters(raster_stack = Fulanus_present_year_averages,
-    FUN_qlist = qlist(HA = HAlogis(tmax/10)))
-
-plot(HA_raster_present)
-```
-
-```{r, fig.height = 6, fig.width = 6, eval = FALSE, echo = FALSE}
-
-# Let's try also including CWD, which is a proxy for vegetation
 
 # let's include a new column in the table with CWD
 microclimate_by_day$CWD <- raster::extract(mean(CWD_stack), data.frame(Lon = microclimate_by_day$Lon, Lat = microclimate_by_day$Lat))
 
-# let's include a new column in the table with CWD
-microclimate_by_day$PET <- raster::extract(mean(PET_stack), data.frame(Lon = microclimate_by_day$Lon, Lat = microclimate_by_day$Lat))
-
-# let's include a new column in the table with CWD
-microclimate_by_day$AET <- raster::extract(mean(AET_stack), data.frame(Lon = microclimate_by_day$Lon, Lat = microclimate_by_day$Lat))
-
 # Let's try fitting a curve with CWD
 
-HAlogisticCWD <- nls(HA ~ SSlogis(temp_air_avg + CWD, Asym, xmid, scal), data = microclimate_by_day)
-HAGompertzCWD <- nls(HA ~ SSposnegRichards(temp_air_avg + CWD, Asym, K, Infl, modno = 32, pn.options = "G_options"), data = microclimate_by_day)
-HAVonBertalannfyCWD <- nls(HA ~ SSposnegRichards(temp_air_avg + CWD, Asym, K, Infl, modno = 32, pn.options = "VB_options"), data = microclimate_by_day)
-HARichardsCWD <- nls(HA ~ SSposnegRichards(temp_air_avg + CWD, Asym, K, Infl, M, modno = 12, pn.options = "R_options"), data = microclimate_by_day)
+HAlogisticCWD <- try(nls(HA ~ SSlogis(temp_air_avg + CWD, Asym, xmid, scal), data = microclimate_by_day))
 
-list(HAlogisticCWD, HAGompertzCWD, HAVonBertalannfyCWD, HARichardsCWD)
+HAGompertzCWD <- try(nls(HA ~ SSposnegRichards(temp_air_avg + CWD, Asym, K, Infl, modno = 32, pn.options = "G_options"), data = microclimate_by_day))
 
+HAVonBertalannfyCWD <- try(nls(HA ~ SSposnegRichards(temp_air_avg + CWD, Asym, K, Infl, modno = 32, pn.options = "VB_options"), data = microclimate_by_day))
+
+HARichardsCWD <- try(nls(HA ~ SSposnegRichards(temp_air_avg + CWD, Asym, K, Infl, M, modno = 12, pn.options = "R_options"), data = microclimate_by_day))
+```
+
+It seems the only algorithm able to converge was a simple logistic, so let's use that.
+
+```{r}
 HA_CWD_curve <- 
-fit_curves(list(HAlogisticCWD, 
-                HAGompertzCWD, 
-                HAVonBertalannfyCWD, 
-                HARichardsCWD), 
+fit_curves(HAlogisticCWD,
   predict_formals = c("temp_air_avg", "CWD"))
 
 HAlogis <- HA_CWD_curve$model_1$predict
 
+# Let's join CWD to hour climatic stack
+
 FulanusEcoRasters_present_CWD <- FulanusEcoRasters_present
 FulanusEcoRasters_present_CWD$present <- stack(FulanusEcoRasters_present$present, CWD_stack)
 
-Fulanus_present_year_averages <-
-   transform_rasters(FulanusEcoRasters_present_CWD$present,
-    FUN_qlist = qlist(tmax_average = mean(tmax),
-                      CWD_average = mean(CWD)))
-
 HA_raster_present <-
-  transform_rasters(raster_stack = Fulanus_present_year_averages,
+  transform_rasters(raster_stack = FulanusEcoRasters_present_CWD$present,
     FUN_qlist = qlist(HA = HAlogis(tmax, CWD)))
 
-plot(HA_raster_present)
+plot(mean(HA_raster_present))
 ```
+
 
 ## get performace considering microhabitat temperatures
 
-We used WorldClim temperatures to estimate performance accross the distribution of our species. Those temperatures are more akin to those measured at weather station. A more precise way to do it might be using estimates of microhabitat temperature. We have microhabitat temperatures from our `FulanusMicroclimate` dataset, which we can use to create a model relating microhabitat temperature to air temperature and vegetation and extrapolate it (I'm at the field with limited internet, so I don't have a proper vegetation layer, such as EVI or NDVI, but I will use precipitation as a placeholder and fix it later).
+We used WorldClim temperatures to estimate performance accross the distribution of our species. Those temperatures are more akin to those measured at weather station. A more precise way to do it might be using estimates of microhabitat temperature. We have microhabitat temperatures from our `FulanusMicroclimate` dataset, which we can use to create a model relating microhabitat temperature to air temperature and vegetation and extrapolate it.
 
 ```{r, fig.height = 6, fig.width = 6}
-
-
-# let's include a new column in the table with CWD
-microclimate_by_day$CWD <- raster::extract(mean(CWD_stack), data.frame(Lon = microclimate_by_day$Lon, Lat = microclimate_by_day$Lat))
 
 microtemp_model <-
 fit_curves(glm(temp_micro_avg ~ temp_air_avg + CWD, data = microclimate_by_day))
 
 predict_microtemp <- microtemp_model$model_1$predict
 
-#first, let's fix the temperature scale
-Fulanus_present_year_averages_scaled <- Fulanus_present_year_averages
-Fulanus_present_year_averages_scaled$tmax_average <- Fulanus_present_year_averages$tmax_average/10
-
-Fulanus_present_year_averages_scaled$CWD <- mean(CWD_stack)
-
 microtemp_raster_present <-
-  transform_rasters(raster_stack = Fulanus_present_year_averages_scaled,
-    FUN_qlist = qlist(microtemp = predict_microtemp(temp_air_avg = tmax, CWD = CWD))) 
-
-names(microtemp_raster_present) <- "microtemp"
+  transform_rasters(raster_stack = FulanusEcoRasters_present_CWD$present,
+    FUN_qlist = qlist(microtemp = predict_microtemp(temp_air_avg = tmax/10, CWD = CWD))) 
 
 Perf_rasters_microtemp <-
   transform_rasters(raster_stack = microtemp_raster_present,
@@ -569,28 +564,74 @@ plot(ha_capped)
 plot(h_restriction)
 ```
 
-## Cleaning points
+## Summarizing accross spatially varying periods (geographical variation in phenology)
 
-Some points might be too close to each other and be redundant, while other might be mistakenly placed in regions where the species is known not to occurr. Fulanus only occurrs between the altitudes of 500 and 1000 meters. Let's filter out points that are within 2 kilometers from each other and outside the altitude range where the species is know to occurr. 
+Now, let's say the most crucial period for *Fulanus* population dynamics is their breeding period and they will breed only under certain climatic conditions. This might cause their breeding period to vary spatially and temporally. In order to account for that, we can fit a logistic model of breeding status vs climate, using data from the table `FulanusBreeding`, which contains data on breeding status and climate at different localities. Then we can use this model to create binary rasters with the locations where Fulanus is breeding at each month, using function `transform_rasters`. After that, we can summary the climatic rasters only during the breeding season at different places, by using the binary rasters as weights to average other variables. You can use this method to merge any raster according to a spatial varying criterium. This can be used, for example, to merge rasters of locally adapted physiology according to the distribution of populations.
 
-```{r, message = FALSE, warning = FALSE, fig.height = 6, fig.width = 6}
-# A reference layer has to be inputed 
+Let's take a look at the table.
 
-alt <- FulanusEcoRasters_present$present$alt
+```{r}
+head(FulanusBreeding)
+```
 
-FulanusDistribution_clean <- 
- clean_points(coord = FulanusDistribution,
-   merge_dist = 2,
-   reference_layer = alt > 500 & alt < 1000,
-   layer_filter = 0)
+Now we fit the model of breeding season.
 
-#library(ggmap)
+```{r, fig.height = 6, fig.width = 6}
 
-#ggmap(Fulanus_big) +
-#  geom_point(data = FulanusDistribution_clean, 
-#    mapping = aes(x = Lon, y = Lat), 
-#    size = 1, 
-#    colour = 'red')
+Phen_model <- fit_curves(models = glm(breeding ~ prec, family = binomial(link = 'logit'), data = FulanusBreeding))
+
+PhenFUN1 <- Phen_model$model_1$predict
+
+```
+
+And then we extrapolate it.
+
+```{r}
+
+season_rain_rasters <-
+  transform_rasters(raster_stack = FulanusEcoRasters_present$present,
+                    FUN_qlist = qlist(season_rain = PhenFUN1(prec)))
+```
+
+It makes sense for us to convert this to binary now, but leaving it as proportions would also work.
+
+```{r}
+# Let's convert the raster to binary
+
+season_rain_rasters_binary <-
+  calc(season_rain_rasters, function(x) ifelse(x < 0.5, 0, 1))
+
+FulanusEcoRasters_season_rain <-
+    transform_rasters(FulanusEcoRasters_present$present,
+      FUN_qlist = qlist(weighted.mean(tmax, weights = season_rain_rasters_binary)))
+
+# Length of Breeding season
+plot(sum(season_rain_rasters))
+
+# Average Performance during breeding season
+plot(FulanusEcoRasters_season_rain$weighted.mean_tmax_season_rain_rasters_binary)
+```
+
+The function can also be a condition. Let's say we are only interested on the periods when precipitation is bigger than 150.
+
+```{r, fig.height = 6, fig.width = 6}
+
+PhenFUN2 <- function(x) ifelse(x > 150, 1, 0)
+
+season_prec_rasters <-
+  transform_rasters(raster_stack = FulanusEcoRasters_present$present,
+    FUN_qlist = qlist(season_rain = PhenFUN2(prec)))
+
+FulanusEcoRasters_season_prec <-
+    transform_rasters(FulanusEcoRasters_present$present,
+      FUN_qlist = qlist(weighted.mean(tmax, weights = season_prec_rasters)))
+
+# Length of Breeding season
+plot(sum(season_prec_rasters))
+
+# Average Performance during breeding season
+plot(FulanusEcoRasters_season_prec)
+
 ```
 
 ## SDM

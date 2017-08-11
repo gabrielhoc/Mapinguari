@@ -4,7 +4,7 @@
 \alias{sradFUN}
 \title{Wrapper around \code{Solar} function from package \code{EcoHydrology}}
 \usage{
-sradFUN(alt, tmax, tmin, forest = 0)
+sradFUN(alt, tmax, tmin)
 }
 \arguments{
 \item{alt}{Raster* object. Altitude raster.}

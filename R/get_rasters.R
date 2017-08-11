@@ -201,8 +201,14 @@ get_rasters <- function(raster_source = NULL,
 
   names(grouped_rasters) <- names(years_scenarios_list)
 
-  final_list <-
-    grouped_rasters %>%
+  if (length(grouped_rasters) == 1 & names(grouped_rasters) == 'fixed') {
+
+    final_list <- grouped_rasters
+
+    } else {
+
+      final_list <-
+      grouped_rasters %>%
     names() %>%
     `!=`('fixed') %>%
     `[`(grouped_rasters, .) %>%
@@ -212,6 +218,9 @@ get_rasters <- function(raster_source = NULL,
 
     } # close function
     ) # close lapply
+} # close else
+
+  names(final_list) <- names(years_scenarios_list)[names(years_scenarios_list) != 'fixed']
 
   if (!is.null(alert)) {beepr::beep(alert)}
 
@@ -231,10 +240,10 @@ VYScomb <- function(years = NA,
   scenarios = NA,
   non_fixed_var = NA,
   fixed_var = NA,
-  baseline = c("present", "baseline"),
+  baseline = "present",
   separator = '_') {
 
-  if (is.null(non_fixed_var[1])) return(data.frame(vys_names = fixed_var))
+  if (is.null(non_fixed_var[1])) return(data.frame(vys_names = fixed_var, vars = NA, years = NA, scenarios = NA, stringsAsFactors = FALSE))
 
   vys_names <-
     setdiff(years, baseline) %>%

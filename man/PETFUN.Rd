@@ -4,7 +4,7 @@
 \alias{PETFUN}
 \title{Wrapper around \code{PET_fromTemp} function from package \code{EcoHydrology}}
 \usage{
-PETFUN(tmax, tmin, alt, forest = 0)
+PETFUN(tmax, tmin, alt)
 }
 \arguments{
 \item{tmax}{Raster* object. Maximum temperature raster.}

@@ -14,15 +14,21 @@ Encoding: UTF-8
 LazyData: true
 URL: http://github.com/gabrielhoc/Mapinguari
 BugReports: http://github.com/gabrielhoc/Mapinguari/issues
-Suggests: 
-    beepr,
-    knitr,
-    rmarkdown,
-    testthat,
+Suggests:
+    biomod2,
+    car,
+    corrplot,
+    dismo,
+    doParallel,
+    dplyr,
+    EcoHydRology,
+    ggmap,
+    ggplot2,
     mgcv,
-    EcoHydRology
+    usdm
 VignetteBuilder: knitr
 Imports: 
+    beepr,
     magrittr,
     parallel,
     pander,
