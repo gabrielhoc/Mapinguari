@@ -20,7 +20,3 @@
 #' @docType package
 #' @name Mapinguari
 NULL
-
-.onUnload <- function(libpath) {
-  library.dynam.unload("Mapinguari", libpath)
-}

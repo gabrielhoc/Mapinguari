@@ -23,10 +23,15 @@ Suggests:
     dplyr,
     EcoHydRology,
     FlexParamCurve,
+    gbm,
+    geosphere,
     ggmap,
     ggplot2,
     knitr,
     mgcv,
+    randomForest,
+    rgeos,
+    sp,
     testthat,
     usdm
 VignetteBuilder: knitr

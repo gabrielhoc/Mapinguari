@@ -720,7 +720,7 @@ myBiomodOption <- BIOMOD_ModelingOptions(MAXENT.Phillips = list(path_to_maxent.j
 
 # Parallel processing
 library(doParallel)
-cl <- makeCluster(4) # number of cores in computer
+cl <- makeCluster(2) # number of cores in computer
 registerDoParallel(cl)
 
 FulanusModelOut <- BIOMOD_Modeling(FulanusBiomodData,
