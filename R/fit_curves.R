@@ -73,9 +73,9 @@ fit_curves <- function(
         names(zzz) <- names(args_mat)
 
         switch(class(xx)[1],
-          glm = predict.glm(xx, newdata = zzz, type = "response", ...),
-          lm = predict.lm(xx, newdata = zzz, type = "response", ...),
-          nls = predict(xx, newdata = zzz, ...)[1],
+          glm = stats::predict.glm(xx, newdata = zzz, type = "response", ...),
+          lm = stats::predict.lm(xx, newdata = zzz, type = "response", ...),
+          nls = stats::predict.nls(xx, newdata = zzz, ...)[1],
           gam = mgcv::predict.gam(xx, newdata = zzz, type = "response", ...),
           gamm = mgcv::predict.gam(xx, newdata = zzz, type = "response", ...),
           gbm = gbm::predict.gbm(xx, newdata = zzz, type = "response", ...),

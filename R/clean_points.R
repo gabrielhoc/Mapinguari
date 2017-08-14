@@ -41,7 +41,10 @@ clean_points <- function(coord,
 
     # subset Lon and Lat
 
-    Lon_Lat <- subset(coord, select = c(Lon, Lat))
+    Lon <- coord$Lon
+    Lat <- coord$Lat
+
+    Lon_Lat <- cbind(Lon, Lat)
 
     # get hr_res to for resolution to less than an hour
 
@@ -63,7 +66,7 @@ clean_points <- function(coord,
 
     georef <- r_e_acsel_df
     georef_layer <- cbind(georef, layer = raster::extract(reference_layer, georef, method = "bilinear"))
-    species_selected_coordinates <- georef_layer[complete.cases(georef_layer$layer),]
+    species_selected_coordinates <- georef_layer[stats::complete.cases(georef_layer$layer),]
     names(species_selected_coordinates)[3] <- names(reference_layer)
 
     # subset if altitude range is included

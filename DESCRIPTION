@@ -6,8 +6,7 @@ Authors@R: c(
     person("Gabriel", "Caetano", email = "gabrielhoc@gmail.com", role = c("aut", "cre")),
     person("Juan", "Santos", email = "infraguttatus@gmail.com", role = c("aut")),
     person("Barry", "Sinervo", email = "lizardrps@gmail.com", role = c("aut")))
-Description: More about what it does (maybe more than one line)
-    Use four spaces when indenting paragraphs within the Description.
+Description: Mapinguari is a package for program R aimed at providing tools to facilitate the incorporation of biological processes in biogeographical analyses. It offers conveniences in fitting, comparing and extrapolating models of biological processes such as physiology, phenology, adaptation, interspecific interactions, demography and dispersal. These spatial extrapolations can be informative by themselves, but also complement traditional correlative SDM methods, by mixing environmental and process-based predictors.
 Depends: R (>= 3.3.1)
 License: GPL-2
 Encoding: UTF-8
@@ -18,13 +17,17 @@ Suggests:
     biomod2,
     car,
     corrplot,
+    devtools,
     dismo,
     doParallel,
     dplyr,
     EcoHydRology,
+    FlexParamCurve,
     ggmap,
     ggplot2,
+    knitr,
     mgcv,
+    testthat,
     usdm
 VignetteBuilder: knitr
 Imports: 
