@@ -108,7 +108,6 @@ Now, let's get some information on the climate of this region.
 We can use function `get_rasters` to extract WorldClim surfaces for that area. The argument `ext` tells us which is the area you desire to crop your rasters around. It accepts either a numerical vector with the coordinates of cropping limits (in order: western most longitude, easter most longitude, southern most latitude then northern most latitude), or a table of longitudes (column named `Lon`) and latitudes (column named `Lat`), such as the `FulanusDistribution_clean` table we created previously. In this case, the function will grab the coordinates of the most extreme points and use those as the cropping limits. The argument `margin` adds to these limits, and it is on the same unit as the coordinates you supply.
 
 ```{r, message = FALSE, warning = FALSE, fig.height = 6, fig.width = 6}
-# library(Mapinguari)
 library(raster)
 
 FulanusEcoRasters_present <-
