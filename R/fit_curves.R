@@ -79,7 +79,7 @@ fit_curves <- function(
           gam = mgcv::predict.gam(xx, newdata = zzz, type = "response", ...),
           gamm = mgcv::predict.gam(xx, newdata = zzz, type = "response", ...),
           gbm = gbm::predict.gbm(xx, newdata = zzz, type = "response", ...),
-          randomForest = randomForest::predict.randomForest(xx, newdata = zzz, type = "response", ...),
+          randomForest = predict(xx, newdata = zzz, type = "response", ...),
           predict(xx, newdata = zzz, type = "response", ...))
       })
 
