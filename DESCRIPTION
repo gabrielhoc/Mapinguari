@@ -1,7 +1,7 @@
 Package: Mapinguari
 Type: Package
 Title: Tools for process-based biogeographical analysis
-Version: 0.0.0.9999
+Version: 0.0.1
 Authors@R: c(
     person("Gabriel", "Caetano", email = "gabrielhoc@gmail.com", role = c("aut", "cre")),
     person("Juan", "Santos", email = "infraguttatus@gmail.com", role = c("aut")),
