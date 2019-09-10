@@ -6,7 +6,7 @@ Authors@R: c(
     person("Gabriel", "Caetano", email = "gabrielhoc@gmail.com", role = c("aut", "cre")),
     person("Juan", "Santos", email = "infraguttatus@gmail.com", role = c("aut")),
     person("Barry", "Sinervo", email = "lizardrps@gmail.com", role = c("aut")))
-Description: Mapinguari is a package for program R aimed at providing tools to facilitate the incorporation of biological processes in biogeographical analyses. It offers conveniences in fitting, comparing and extrapolating models of biological processes such as physiology, phenology, adaptation, interspecific interactions, demography and dispersal. These spatial extrapolations can be informative by themselves, but also complement traditional correlative SDM methods, by mixing environmental and process-based predictors.
+Description: Mapinguari is a package for program R aimed at providing tools to facilitate the incorporation of biological processes in biogeographical analyses. It offers conveniences in fitting, comparing and extrapolating models of biological processes such as physiology and phenology. These spatial extrapolations can be informative by themselves, but also complement traditional correlative SDM methods, by mixing environmental and process-based predictors.
 Depends: R (>= 3.5)
 License: GPL-2
 Encoding: UTF-8
