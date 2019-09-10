@@ -18,16 +18,13 @@ Suggests:
     ggmap,
     ggplot2,
     mgcv,
-VignetteBuilder: knitr
 Imports:
     dplyr,
-    knitr,
     magrittr,
     parallel,
     raster,
     rgdal,
     rlang,
-    rmarkdown,
     stringr,
     testthat
 RoxygenNote: 6.1.1
