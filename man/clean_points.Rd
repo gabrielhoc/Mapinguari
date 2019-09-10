@@ -4,19 +4,19 @@
 \alias{clean_points}
 \title{Clean occurrence records}
 \usage{
-clean_points(coord, merge_dist = 2, reference_layer, layer_filter = NULL,
-  dist_unit = "km")
+clean_points(coord, merge_dist, coord_col = c("Lon", "Lat"),
+  filter_layer = NULL, na.rm = FALSE)
 }
 \arguments{
 \item{coord}{data.frame. Data frame containing longitudes (Lon) and latitudes (Lat) of occurrence records of a species.}
 
-\item{merge_dist}{numeric. Maximum distance between points to be merged.}
+\item{merge_dist}{numeric. Maximum distance between points to be merged, in meters.}
 
-\item{reference_layer}{Raster* object. Any raster for the area containing the occurrence records.}
+\item{coord_col}{vector of strings or integers. If x has more than two columns, indicate the name or position of longitude and latitude columns}
 
-\item{layer_filter}{Values for locations at reference raster which occurrence records should be eliminated.}
+\item{filter_layer}{RasterLayer. Binary raster with 1 representing the regions where records should be kept and 0 the regions where they should be eliminated.}
 
-\item{dist_unit}{character. Unit for the merging distance. Either 'km' for kilometers or 'degrees' for decimal degrees.}
+\item{na.rm}{logical. if TRUE, remove lines with NA in any coordinate.}
 }
 \value{
 Data frame with remaining longitudes and latitudes.
@@ -26,21 +26,14 @@ Data frame with remaining longitudes and latitudes.
 }
 \examples{
 
-FulanusEcoRasters_present <-
-  get_rasters(
-    raster_source = "/Users/gabriel/Documents/Mapinguari/global_grids_10_minutes",
-    ext = FulanusDistribution,
-    margin = 5,
-    non_fixed_var = c('prec', 'tmin', 'tmax'),
-    fixed_var = 'alt',
-    years = c("present"),
-    reorder = TRUE)
+#First, we need to obtain an altitude raster to filter by altitude.
+library(raster)
+alt <- raster::getData("alt", country = "BRA", mask = TRUE)
 
-alt <- FulanusEcoRasters_present$present$alt
-
-clean_points(coord = FulanusDistribution,
-  merge_dist = 2,
-  reference_layer = alt > 500 & alt < 1000,
-  layer_filter = 0)
+# Then, we clean the points
+ TtorquatusDistribution_clean <-
+  clean_points(coord = TtorquatusDistribution,
+               merge_dist = 20000,
+               filter_layer = !is.na(alt))
 
 }

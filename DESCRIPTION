@@ -7,43 +7,28 @@ Authors@R: c(
     person("Juan", "Santos", email = "infraguttatus@gmail.com", role = c("aut")),
     person("Barry", "Sinervo", email = "lizardrps@gmail.com", role = c("aut")))
 Description: Mapinguari is a package for program R aimed at providing tools to facilitate the incorporation of biological processes in biogeographical analyses. It offers conveniences in fitting, comparing and extrapolating models of biological processes such as physiology, phenology, adaptation, interspecific interactions, demography and dispersal. These spatial extrapolations can be informative by themselves, but also complement traditional correlative SDM methods, by mixing environmental and process-based predictors.
-Depends: R (>= 3.3.1)
+Depends: R (>= 3.5)
 License: GPL-2
 Encoding: UTF-8
 LazyData: true
 URL: http://github.com/gabrielhoc/Mapinguari
 BugReports: http://github.com/gabrielhoc/Mapinguari/issues
 Suggests:
-    biomod2,
-    car,
-    corrplot,
-    devtools,
-    dismo,
-    doParallel,
-    dplyr,
     EcoHydRology,
-    FlexParamCurve,
-    gbm,
     geosphere,
     ggmap,
     ggplot2,
-    knitr,
     mgcv,
-    randomForest,
-    rgeos,
-    sp,
-    testthat,
-    usdm
 VignetteBuilder: knitr
-Imports: 
-    beepr,
+Imports:
+    dplyr,
+    knitr,
     magrittr,
     parallel,
-    pander,
-    purrr,
-    plyr,
-    qdap,
     raster,
+    rgdal,
+    rlang,
+    rmarkdown,
     stringr,
-    tibble
-RoxygenNote: 6.0.1
+    testthat
+RoxygenNote: 6.1.1

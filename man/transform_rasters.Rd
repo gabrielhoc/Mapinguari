@@ -2,45 +2,45 @@
 % Please edit documentation in R/transform_rasters.R
 \name{transform_rasters}
 \alias{transform_rasters}
-\title{Transform environmental rasters in ecophysiological rasters.}
+\title{Transform raster values using custom calls.}
 \usage{
-transform_rasters(raster_stack, FUN_qlist, separator = "_", alert = NULL)
+transform_rasters(raster_stack, separator = "_", ncores = 1, ...)
 }
 \arguments{
 \item{raster_stack}{RasterStack. Stack with environmental layers.}
 
-\item{FUN_qlist}{list. A list of unevaluated expressions, as created by function qlist.}
-
 \item{separator}{character. Character that separates variable names, years and scenarios.}
 
-\item{alert}{integer. Plays a sound alert when function is done running. See documentation of package \code{beepr} for description of sound options.}
+\item{ncores}{integer. Number of cores to use in parallel processing.}
+
+\item{...}{New rasters created.}
 }
 \value{
 Returns a RasterStack with layers for the predictions required.
 }
 \description{
-\code{transform_rasters} Get model predictions for a raster stack
+\code{transform_rasters} Applies custom expressions to transform the values of spatial rasters in a stack, taking into account temporal repetition of those rasters.
 }
 \examples{
-
+\dontrun{
 FulanusEcoRasters_present <-
   get_rasters(
-    raster_source = "/Users/gabriel/Documents/Mapinguari/global_grids_10_minutes",
-    ext = FulanusDistribution,
+    var = c('prec', 'tmax', 'tmin'),
+    scenarios = 'present',
+    source = "C:/Users/gabri/Dropbox/Mapinguari/global_grids_10_minutes",
+    ext = FulanusDistribution[c(2,3)],
     margin = 5,
-    non_fixed_var = c('prec', 'tmin', 'tmax'),
-    fixed_var = 'alt',
-    years = c("present"),
-    reorder = TRUE)
+    reorder = c(1, 10, 11, 12, 2, 3, 4, 5, 6, 7, 8, 9))
+
+# You can apply any function to subsets of rasters in the stack,
+# by selecting the layers with double brackets.
 
 transform_rasters(raster_stack = FulanusEcoRasters_present$present,
-  FUN = qlist(total_1sem = sum(tmax[[1:6]]),
-    mean_1sem = mean(tmax[[1:6]]),
-    sd_1sem = sd(tmax[[1:6]]),
-    total_2sem = sum(tmax[[7:12]]),
-    mean_2sem = mean(tmax[[7:12]]),
-    sd_2sem = sd(tmax[[7:12]])),
-  separator = '_',
-  alert = NULL)
-
+    total_1sem = sum(tmax[1:6]),
+    mean_1sem = mean(tmax[1:6]),
+    sd_1sem = sd(tmax[1:6]),
+    total_2sem = sum(tmax[7:12]),
+    mean_2sem = mean(tmax[7:12]),
+    sd_2sem = sd(tmax[7:12]))
+}
 }

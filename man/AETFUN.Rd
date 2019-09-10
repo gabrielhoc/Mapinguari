@@ -4,12 +4,14 @@
 \alias{AETFUN}
 \title{Generates Actual EvapoTranspiration rasters}
 \usage{
-AETFUN(PET, prec)
+AETFUN(PET, prec, separator = "_")
 }
 \arguments{
 \item{PET}{RasterStack with 12 layers. Total month Potential EvapoTranspiration rasters.}
 
 \item{prec}{RasterStack with 12 layers. Total month precipitation rasters.}
+
+\item{separator}{character. Character that separates variable names, and scenarios.}
 }
 \value{
 Returns a RasterLayer with estimates of Actual EvapoTranspiration in milimiters.
@@ -18,26 +20,23 @@ Returns a RasterLayer with estimates of Actual EvapoTranspiration in milimiters.
 \code{AETFUN} Applies Duncan Golicher's Bucket model to Potential EvapoTranspiration and precipitation rasters in order to get Actual Evapotranspiration estimates for an area.
 }
 \examples{
-
+\dontrun{
 FulanusEcoRasters_present <-
   get_rasters(
-    raster_source = "/Users/gabriel/Documents/Mapinguari/global_grids_10_minutes",
-    ext = FulanusDistribution,
+    var = c('alt', 'prec', 'tmax', 'tmin'),
+    scenarios = c("present"),
+    source = "C:/Users/gabri/Dropbox/Mapinguari/global_grids_10_minutes",
+    ext = FulanusDistribution[c(2,3)],
     margin = 5,
-    non_fixed_var = c('prec', 'tmin', 'tmax'),
-    fixed_var = 'alt',
-    years = c("present"),
-    reorder = TRUE)
+    reorder = c(1, 10, 11, 12, 2, 3, 4, 5, 6, 7, 8, 9))
 
 alt <- FulanusEcoRasters_present$present$alt
-tmax <- FulanusEcoRasters_present$present[[25:36]]/10
-tmin <- FulanusEcoRasters_present$present[[13:24]]/10
+tmin <- FulanusEcoRasters_present$present[[25:36]]/10
+tmax <- FulanusEcoRasters_present$present[[13:24]]/10
 prec <- FulanusEcoRasters_present$present[[1:12]]
 
 PET <- PETFUN(tmax, tmin, alt)
 
 AETFUN(PET, prec)
-
-AETFUN(PET, prec)
-
+}
 }

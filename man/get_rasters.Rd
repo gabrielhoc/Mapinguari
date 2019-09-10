@@ -2,71 +2,41 @@
 % Please edit documentation in R/get_rasters.R
 \name{get_rasters}
 \alias{get_rasters}
-\title{Retrieve and organize spatial environmental information.}
+\title{Retrieve and organize spatial rasters.}
 \usage{
-get_rasters(raster_source = NULL, ext = c(-180, 180, -60, 90), margin = 0,
-  resolution = 10, non_fixed_var = NULL, fixed_var = NULL,
-  years = "present", scenarios = NULL, baseline = "present",
-  separator = "_", projection_model = "MP", reorder = FALSE,
-  download_source = "pkg-raster", alert = NULL)
+get_rasters(var = NULL, scenario = NULL, raster_path = NULL,
+  ext = c(-180, 180, -60, 90), coord_col = c("Lon", "Lat"),
+  margin = 0, separator = "_")
 }
 \arguments{
-\item{raster_source}{character or list of RasterStack. You can either input a path to a folder with the required rasters or a list of RasterStack organized by year/scenario.}
+\item{var}{character. Names of variables to be loaded.}
 
-\item{ext}{numeric vector or dataframe with coordinates. Extension to crop rasters. Input can be either a vector with limiting latitudes and longitudes or a table of coordinates. In case the input is a numeric vector, the order of values should be: western most longitude, easter most longitude, southern most latitude then northern most latitude. Longitude values west of GMT and latitude values south of equator are distinguished by a negative sign. In case the input is a table of coordinates, the points further in each direction will determine the extent for cropping.}
+\item{scenario}{character. Names of scenarios for the variables.}
+
+\item{raster_path}{character. Path to folder with raster files. See \code{\link[raster]{writeFormats}} for supported formats}
+
+\item{ext}{numeric, data. frame or Extent object. Extent to crop rasters.}
+
+\item{coord_col}{character. Names of columns containing Longitude and Latitude.}
 
 \item{margin}{numeric. Additional distance to be added to margin of extent, in degrees.}
 
-\item{resolution}{numeric. Spatial resolution of rasters, in degrees. This is used for downloading only.}
-
-\item{non_fixed_var}{character vector. Names of the time varying variables to be outputed. This variables will be subject to variation according to argument `years`.}
-
-\item{fixed_var}{character vector. Names of the time fixed variables to be outputed. This variables will not be subject to variation according to argument `years`.}
-
-\item{years}{character vector. Names of years for time varying variables.}
-
-\item{scenarios}{character vector. Names of future scenarios to for time varying variables.}
-
-\item{baseline}{character vector. Names of years not subject to scenarios.}
-
-\item{separator}{character. Character that separates variable names, years and scenarios.}
-
-\item{projection_model}{character. Projection model for future variables. Must be any model accepted in \code{raster::getData}}
-
-\item{reorder}{logical. If TRUE, will use last two characters of layer names in RasterStacks with 12 layers to order them in ascending order.}
-
-\item{download_source}{character. Where to download rasters from. Default is 'pkg-raster' which will get rasters from WorldClim, using package 'raster' functions.}
-
-\item{alert}{integer. Plays a sound alert when function is done running. See documentation of package beepr for description of sound options.}
+\item{separator}{character. Character that separates variable names and scenario names.}
 }
 \value{
 Returns a list of raster stacks for the variables required, organized by year/scenario combination.
 }
 \description{
-\code{get_rasters} returns an organized list of environmental rasters.
+\code{get_rasters} Loads rasters from directory and returns them in an organized list of specified scenarios.
 }
 \examples{
-
-# Fulanus_Ecorasters_download <-
-#   get_rasters(
-#     ext = FulanusDistribution,
-#     margin = 5,
-#     non_fixed_var = c('prec', 'tmin', 'tmax'),
-#     years = c("present", '2050', '2070'),
-#     scenarios = c('rcp26', 'rcp45', 'rcp85'),
-#     alert = 6)
-
-Fulanus_Ecorasters_dir <-
+\dontrun{
+Fulanus_Ecorasters_present <-
   get_rasters(
-    raster_source = "/Users/gabriel/Documents/Mapinguari/global_grids_10_minutes",
-    ext = FulanusDistribution,
-    margin = 5,
-    non_fixed_var = c('prec', 'tmin', 'tmax'),
-    fixed_var = "alt",
-    years = c("present", '2050', '2070'),
-    scenarios = c('rcp26', 'rcp45', 'rcp85'),
-    reorder = TRUE,
-    alert = 4)
-
-
+    var = c('prec', 'tmin', 'tmax'),
+    scenario = 'present',
+    raster_path = "C:/Users/gabri/Dropbox/Mapinguari/global_grids_10_minutes",
+    ext = FulanusDistribution[c(2,3)],
+    margin = 5)
+}
 }

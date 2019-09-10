@@ -7,61 +7,62 @@
 #' @return Returns a RasterStack with 12 layers, one for each month, containing information on the duration of the day at each pixel.
 #'
 #' @examples
-#'
+#' \dontrun{
 #' FulanusEcoRasters_present <-
 #'   get_rasters(
-#'     raster_source = "/Users/gabriel/Documents/Mapinguari/global_grids_10_minutes",
-#'     ext = FulanusDistribution,
+#'     var = c('alt', 'prec', 'tmax', 'tmin'),
+#'     scenarios = c("present"),
+#'     source = "C:/Users/gabri/Dropbox/Mapinguari/global_grids_10_minutes",
+#'     ext = FulanusDistribution[c(2,3)],
 #'     margin = 5,
-#'     non_fixed_var = c('prec', 'tmin', 'tmax'),
-#'     fixed_var = 'alt',
-#'     years = c("present"),
-#'     reorder = TRUE)
+#'     reorder = c(1, 10, 11, 12, 2, 3, 4, 5, 6, 7, 8, 9))
 #'
 #' daylengthFUN(FulanusEcoRasters_present$present)
-#'
+#'}
 #' @export
 
 daylengthFUN <- function(reference_raster) {
 
-    reference_layer <- reference_raster[[1]]
-    lat_raster  <- raster::init(reference_layer, 'y')
+  reference_layer <- reference_raster[[1]]
+  lat_raster  <- raster::init(reference_layer, 'y')
 
-    day_months <- list(c(1:31),
-                       c(32:59),
-                       c(60:90),
-                       c(91:120),
-                       c(121:151),
-                       c(152:181),
-                       c(182:212),
-                       c(213:243),
-                       c(244:273),
-                       c(274:304),
-                       c(305:334),
-                       c(336:366))
+  day_months <- list(c(1:31),
+                     c(32:59),
+                     c(60:90),
+                     c(91:120),
+                     c(121:151),
+                     c(152:181),
+                     c(182:212),
+                     c(213:243),
+                     c(244:273),
+                     c(274:304),
+                     c(305:334),
+                     c(336:366))
 
   day_length_list  <-
     lapply(day_months, function(x){
 
       daylengths_in_this_month <-
-      lapply(x, function(y){
+        lapply(x, function(y){
 
-  geosphere::daylength(raster::values(lat_raster), doy = y)
+          geosphere::daylength(raster::values(lat_raster), doy = y)
 
-      })
+        })
 
       days_dataframe <- data.frame(daylengths_in_this_month)
 
       day_length_raster <- lat_raster
       raster::values(day_length_raster) <- apply(days_dataframe, 1, mean)
 
-      names(day_length_raster) <- "daylength"
-
       day_length_raster
 
     })
 
-  return(raster::stack(day_length_list))
+  out <- raster::stack(day_length_list)
+
+  names(out) <- paste("daylength", c("01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"), sep = "_")
+
+  return(out)
 
 }
 
@@ -75,7 +76,6 @@ daylengthFUN <- function(reference_raster) {
 #' @return a vector of relative humidity values, in decimal.
 #'
 #' @examples
-#'
 #' rhFUN(25, 20)
 #'
 #' rhFUN(25:40, 20:35)
@@ -96,30 +96,30 @@ rhFUN <- function(temp, vapor) {
 #' @param tmax Raster* object. Maximum temperature raster.
 #' @param tmin Raster* object. Minimum temperature raster.
 #' @param alt Raster* object. Altitude raster.
+#' @param separator character. Character that separates variable names, and scenarios.
 #'
 #' @return Returns a RasterLayer with estimates of Potential EvapoTranspiration in milimiters.
 #'
 #' @examples
-#'
+#' \dontrun{
 #' FulanusEcoRasters_present <-
 #'   get_rasters(
-#'     raster_source = "/Users/gabriel/Documents/Mapinguari/global_grids_10_minutes",
-#'     ext = FulanusDistribution,
+#'     var = c('alt', 'prec', 'tmax', 'tmin'),
+#'     scenarios = c("present"),
+#'     source = "C:/Users/gabri/Dropbox/Mapinguari/global_grids_10_minutes",
+#'     ext = FulanusDistribution[c(2,3)],
 #'     margin = 5,
-#'     non_fixed_var = c('prec', 'tmin', 'tmax'),
-#'     fixed_var = 'alt',
-#'     years = c("present"),
-#'     reorder = TRUE)
+#'     reorder = c(1, 10, 11, 12, 2, 3, 4, 5, 6, 7, 8, 9))
 #'
 #' alt <- FulanusEcoRasters_present$present$alt
-#' tmax <- FulanusEcoRasters_present$present[[25:36]]/10
-#' tmin <- FulanusEcoRasters_present$present[[13:24]]/10
+#' tmin <- FulanusEcoRasters_present$present[[25:36]]/10
+#' tmax <- FulanusEcoRasters_present$present[[13:24]]/10
 #'
 #' PET <- PETFUN(tmax, tmin, alt)
-#'
+#'}
 #' @export
 
-PETFUN <- function(tmax, tmin, alt) {
+PETFUN <- function(tmax, tmin, alt, separator = "_") {
 
   forest = 0 # set this as an argument later
 
@@ -161,12 +161,12 @@ PETFUN <- function(tmax, tmin, alt) {
 
       PET_values <-
         EcoHydRology::PET_fromTemp(Jday = rep(day[k], length(tmax_values)),
-          Tmax_C = tmax_values,
-          Tmin_C = tmin_values,
-          lat_radians = lat_values,
-          aspect = aspect_values,
-          slope = slope_values,
-          forest = forest_values)
+                                   Tmax_C = tmax_values,
+                                   Tmin_C = tmin_values,
+                                   lat_radians = lat_values,
+                                   aspect = aspect_values,
+                                   slope = slope_values,
+                                   forest = forest_values)
 
       raster::values(PET_raster) <- PET_values
 
@@ -174,9 +174,9 @@ PETFUN <- function(tmax, tmin, alt) {
 
     })
 
-      names(PET_output) <- paste("PET", 1:12, sep = "_")
+  names(PET_output) <- paste("PET", 1:12, sep = separator)
 
-      raster::stack(PET_output)
+  raster::stack(PET_output)
 }
 
 #' Generates Actual EvapoTranspiration rasters
@@ -185,36 +185,34 @@ PETFUN <- function(tmax, tmin, alt) {
 #'
 #' @param PET RasterStack with 12 layers. Total month Potential EvapoTranspiration rasters.
 #' @param prec RasterStack with 12 layers. Total month precipitation rasters.
+#' @param separator character. Character that separates variable names, and scenarios.
 #'
 #' @return Returns a RasterLayer with estimates of Actual EvapoTranspiration in milimiters.
 #'
 #' @examples
-#'
+#' \dontrun{
 #' FulanusEcoRasters_present <-
 #'   get_rasters(
-#'     raster_source = "/Users/gabriel/Documents/Mapinguari/global_grids_10_minutes",
-#'     ext = FulanusDistribution,
+#'     var = c('alt', 'prec', 'tmax', 'tmin'),
+#'     scenarios = c("present"),
+#'     source = "C:/Users/gabri/Dropbox/Mapinguari/global_grids_10_minutes",
+#'     ext = FulanusDistribution[c(2,3)],
 #'     margin = 5,
-#'     non_fixed_var = c('prec', 'tmin', 'tmax'),
-#'     fixed_var = 'alt',
-#'     years = c("present"),
-#'     reorder = TRUE)
+#'     reorder = c(1, 10, 11, 12, 2, 3, 4, 5, 6, 7, 8, 9))
 #'
 #' alt <- FulanusEcoRasters_present$present$alt
-#' tmax <- FulanusEcoRasters_present$present[[25:36]]/10
-#' tmin <- FulanusEcoRasters_present$present[[13:24]]/10
+#' tmin <- FulanusEcoRasters_present$present[[25:36]]/10
+#' tmax <- FulanusEcoRasters_present$present[[13:24]]/10
 #' prec <- FulanusEcoRasters_present$present[[1:12]]
 #'
 #' PET <- PETFUN(tmax, tmin, alt)
 #'
 #' AETFUN(PET, prec)
-#'
-#' AETFUN(PET, prec)
-#'
+#'}
 #' @export
 #'
 
-AETFUN <- function(PET, prec) {
+AETFUN <- function(PET, prec, separator = "_") {
 
   Bucket <- PET[[1]]
 
@@ -244,7 +242,7 @@ AETFUN <- function(PET, prec) {
     }
   }
 
-  names(AET) <- paste("AET", 1:12, sep = "_")
+  names(AET) <- paste("AET", 1:12, sep = separator)
 
   AET
 
@@ -257,29 +255,30 @@ AETFUN <- function(PET, prec) {
 #' @param tmax Raster* object. Maximum temperature raster.
 #' @param tmin Raster* object. Minimum temperature raster.
 #' @param alt Raster* object. Altitude raster.
+#' @param separator character. Character that separates variable names, and scenarios.
 #'
 #' @return Returns a RasterLayer with estimates of Solar in kiloJoules by square meter by day.
 #'
 #' @examples
+#' \dontrun{
 #' FulanusEcoRasters_present <-
 #'   get_rasters(
-#'     raster_source = "/Users/gabriel/Documents/Mapinguari/global_grids_10_minutes",
-#'     ext = FulanusDistribution,
+#'     var = c('alt', 'prec', 'tmax', 'tmin'),
+#'     scenarios = c("present"),
+#'     source = "C:/Users/gabri/Dropbox/Mapinguari/global_grids_10_minutes",
+#'     ext = FulanusDistribution[c(2,3)],
 #'     margin = 5,
-#'     non_fixed_var = c('prec', 'tmin', 'tmax'),
-#'     fixed_var = 'alt',
-#'     years = c("present"),
-#'     reorder = TRUE)
+#'     reorder = c(1, 10, 11, 12, 2, 3, 4, 5, 6, 7, 8, 9))
 #'
 #' alt <- FulanusEcoRasters_present$present$alt
-#' tmax <- FulanusEcoRasters_present$present[[25:36]]/10
-#' tmin <- FulanusEcoRasters_present$present[[13:24]]/10
+#' tmin <- FulanusEcoRasters_present$present[[25:36]]/10
+#' tmax <- FulanusEcoRasters_present$present[[13:24]]/10
 #'
 #' srad <- sradFUN(alt = alt, tmax = tmax, tmin = tmin)
-#'
+#'}
 #' @export
 
-sradFUN <- function(alt, tmax, tmin) {
+sradFUN <- function(alt, tmax, tmin, separator = "_") {
 
   forest = 0 # set this as an argument later
 
@@ -293,6 +292,7 @@ sradFUN <- function(alt, tmax, tmin) {
 
   solar_output <- tmax
 
+# parallelize here
   solar_output <-
     lapply(1:12, function(k) {
       tmax_values <- raster::values(tmax[[k]])
@@ -329,8 +329,67 @@ sradFUN <- function(alt, tmax, tmin) {
       solar_output[[k]] <- solar_r
     })
 
-  names(solar_output) <- paste("srad", 1:12, sep = "_")
+  names(solar_output) <- paste("srad", 1:12, sep = separator)
 
   raster::stack(solar_output)
 
 }
+
+#' Physical Chemistry Fire Frequency Model (PC2FM) by Guyette (2012)
+#'
+#' \code{PC2FMFUN} Applies Guyette's Fire frequency model (reference)
+#'
+#' @param prec numeric. Precipitation raster.
+#' @param temp numeric. Temperature raster.
+#' @param alt numeric. Altitude raster.
+#'
+#' @return numeric. Fire frequency based on physical chemical factors
+#'
+#' @examples
+#' PC2FMFUN(50, 25, 1000)
+#'
+#' @export
+
+PC2FMFUN <- function(prec, temp, alt){
+
+  alt[is.na(alt[])] <- 0
+  o <- 0.2095*exp(-0.00012*alt)
+  ARterm <- (prec^2/o) * exp(132/(0.00831*temp))
+  PTrc3 <- 1/((prec^2)/temp)
+
+  1/(0.232 + (2.62 * (10^(-28)) * ARterm) + (52 * PTrc3))
+
+}
+
+#' Sinervo (2010) hours of activity model
+#'
+#' \code{sin_h} Simulates daily variation in temperature and counts amount of time above a temperature threshold, as seen in Sinervo (2010).
+#'
+#' @param tmax Raster* object. Maximum temperature raster.
+#' @param tmin Raster* object. Minimum temperature raster.
+#' @param thrs numeric. Temperature threshold in same unit as rasters.
+#' @param res numeric. time resolution in parts of hour.
+#'
+#' @return numeric. Amount of time in hours above temperature threshold in simulated daily temperature variation.
+#'
+#' @examples
+#' sin_h(28, 10, 23, 3)
+#'
+#' @export
+
+sin_h <- function(tmax, tmin, thrs, res) {
+
+  s0 <- 1:res
+  h0 <- 1:24
+
+  s <- expand.grid(s0, h0)[[1]]
+  h <- expand.grid(s0, h0)[[2]]
+
+  mapply(tmax, tmin, FUN = function(x, y){
+    day_temps <-
+      ((x - y)/2 * sin((pi/12) * (h + (s/res)) - 3 * (pi/4))) + (x + y)/2
+
+    sum(ifelse(day_temps > thrs, 1/res, 0))
+  })
+}
+

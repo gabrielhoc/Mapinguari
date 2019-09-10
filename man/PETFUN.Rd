@@ -4,7 +4,7 @@
 \alias{PETFUN}
 \title{Wrapper around \code{PET_fromTemp} function from package \code{EcoHydrology}}
 \usage{
-PETFUN(tmax, tmin, alt)
+PETFUN(tmax, tmin, alt, separator = "_")
 }
 \arguments{
 \item{tmax}{Raster* object. Maximum temperature raster.}
@@ -12,6 +12,8 @@ PETFUN(tmax, tmin, alt)
 \item{tmin}{Raster* object. Minimum temperature raster.}
 
 \item{alt}{Raster* object. Altitude raster.}
+
+\item{separator}{character. Character that separates variable names, and scenarios.}
 }
 \value{
 Returns a RasterLayer with estimates of Potential EvapoTranspiration in milimiters.
@@ -20,21 +22,20 @@ Returns a RasterLayer with estimates of Potential EvapoTranspiration in milimite
 \code{PETFUN} Gets Potential EvapoTranspiration (PET) rasters from maximum temperature, minimum temperature and altitude rasters by applying function \code{PET_fromTemp} from package \code{EcoHydrology}
 }
 \examples{
-
+\dontrun{
 FulanusEcoRasters_present <-
   get_rasters(
-    raster_source = "/Users/gabriel/Documents/Mapinguari/global_grids_10_minutes",
-    ext = FulanusDistribution,
+    var = c('alt', 'prec', 'tmax', 'tmin'),
+    scenarios = c("present"),
+    source = "C:/Users/gabri/Dropbox/Mapinguari/global_grids_10_minutes",
+    ext = FulanusDistribution[c(2,3)],
     margin = 5,
-    non_fixed_var = c('prec', 'tmin', 'tmax'),
-    fixed_var = 'alt',
-    years = c("present"),
-    reorder = TRUE)
+    reorder = c(1, 10, 11, 12, 2, 3, 4, 5, 6, 7, 8, 9))
 
 alt <- FulanusEcoRasters_present$present$alt
-tmax <- FulanusEcoRasters_present$present[[25:36]]/10
-tmin <- FulanusEcoRasters_present$present[[13:24]]/10
+tmin <- FulanusEcoRasters_present$present[[25:36]]/10
+tmax <- FulanusEcoRasters_present$present[[13:24]]/10
 
 PET <- PETFUN(tmax, tmin, alt)
-
+}
 }

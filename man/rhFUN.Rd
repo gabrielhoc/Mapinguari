@@ -18,7 +18,6 @@ a vector of relative humidity values, in decimal.
 \code{rhFUN}  Calculates relative humidity from air temperature in Celsius and water vapor pressure in milibars
 }
 \examples{
-
 rhFUN(25, 20)
 
 rhFUN(25:40, 20:35)

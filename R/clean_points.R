@@ -2,90 +2,69 @@
 #'
 #' \code{clean_points} Eliminates species occurrence records that are too close to each other or at undesired locations.
 #'
+#' @importFrom magrittr "%>%"
+#'
 #' @param coord data.frame. Data frame containing longitudes (Lon) and latitudes (Lat) of occurrence records of a species.
-#' @param merge_dist numeric. Maximum distance between points to be merged.
-#' @param reference_layer Raster* object. Any raster for the area containing the occurrence records.
-#' @param layer_filter Values for locations at reference raster which occurrence records should be eliminated.
-#' @param dist_unit character. Unit for the merging distance. Either 'km' for kilometers or 'degrees' for decimal degrees.
+#' @param merge_dist numeric. Maximum distance between points to be merged, in meters.
+#' @param coord_col vector of strings or integers. If x has more than two columns, indicate the name or position of longitude and latitude columns
+#' @param filter_layer RasterLayer. Binary raster with 1 representing the regions where records should be kept and 0 the regions where they should be eliminated.
+#' @param na.rm logical. if TRUE, remove lines with NA in any coordinate.
 #'
 #' @return Data frame with remaining longitudes and latitudes.
 #'
 #' @examples
 #'
-#' FulanusEcoRasters_present <-
-#'   get_rasters(
-#'     raster_source = "/Users/gabriel/Documents/Mapinguari/global_grids_10_minutes",
-#'     ext = FulanusDistribution,
-#'     margin = 5,
-#'     non_fixed_var = c('prec', 'tmin', 'tmax'),
-#'     fixed_var = 'alt',
-#'     years = c("present"),
-#'     reorder = TRUE)
+#' #First, we need to obtain an altitude raster to filter by altitude.
+#' library(raster)
+#' alt <- raster::getData("alt", country = "BRA", mask = TRUE)
 #'
-#' alt <- FulanusEcoRasters_present$present$alt
-#'
-#' clean_points(coord = FulanusDistribution,
-#'   merge_dist = 2,
-#'   reference_layer = alt > 500 & alt < 1000,
-#'   layer_filter = 0)
+#' # Then, we clean the points
+#'  TtorquatusDistribution_clean <-
+#'   clean_points(coord = TtorquatusDistribution,
+#'                merge_dist = 20000,
+#'                filter_layer = !is.na(alt))
 #'
 #' @export
 
 clean_points <- function(coord,
-                         merge_dist = 2,
-                         reference_layer,
-                         layer_filter = NULL,
-                         dist_unit = 'km') {
+                         merge_dist,
+                         coord_col = c("Lon", "Lat"),
+                         filter_layer = NULL,
+                         na.rm = FALSE
+) {
 
-    if (dist_unit == 'km') merge_dist <- merge_dist/100 # 1 km ~ 0.01 degrees (also 0.05 degrees ~ 5 km)
+  # find coordinates if `coord` has more than two columns
+  coord_only <-
+    if (ncol(coord) > 2) coord[coord_col] else
+    {if (na.rm == TRUE) coord[!is.na(coord$Lon) | !is.na(coord$Lat),] else coord}
 
-    # subset Lon and Lat
+  # Calculate matrix of point distance
+  dist_mat <- raster::pointDistance(coord_only, lonlat = TRUE, allpairs = TRUE) < merge_dist
 
-    Lon <- coord$Lon
-    Lat <- coord$Lat
+  # set diagonal to NA (it's meaningless, the distance from the point to itself)
+  diag(dist_mat) <- NA
 
-    Lon_Lat <- cbind(Lon, Lat)
+  # Detect which points have at least one case of distance inferior to merge distance
+  logical_dist <- colSums(dist_mat, na.rm = TRUE) == 0
 
-    # get hr_res to for resolution to less than an hour
+  # Detect which points are on forbidden values on the reference_layer, if reference_layer and filter_layer are supplied
+  logical_raster <-
+    if (!is.null(filter_layer)) {
+      raster::extract(filter_layer, coord_only) == 1
+      } else TRUE
 
-    area_not_round <- (geosphere::areaPolygon(Lon_Lat))/1000000 #area in square Km round
-    area <- round(area_not_round, 0) #area in square Km round to integer
-    area_hr_res <- 10 - (round(log10(ifelse(area + 1 > 10000000, 10000000, area + 1)), 0) + 1) #this function assing an interger from 2 to 9 (for really small area 1 km2) based on the area in km2. However, it forces to 2 for extremely large distributions > 10 000 000 km2
+  # subset original table by both logical vectors
+  coord_clean <- coord[logical_dist & logical_raster,]
 
-    # process to reduce redundant localities
+  # print summary
+  rbind(n_entries_species = nrow(coord),
+        n_entries_clean = nrow(coord_clean)) %>%
+    print
 
-    sp::coordinates(coord) <- ~Lon+Lat #set spatial coordinates to create a Spatial object, or retrieve spatial coordinates from a Spatial object
-    raster::crs(coord) <- raster::crs(reference_layer) #Get or set the coordinate reference system (CRS) of a Raster* object.
-    r <- try(raster::raster(coord))
-    raster::res(r) <-  merge_dist # y = 0.05 then 5 km ~0.05 degrees resolution
-    r_e <- raster::extend(r, raster::extent(r) + 1)
-    r_e_acsel <- dismo::gridSample(coord, r_e, n = 1)
-    r_e_acsel_df <- data.frame(r_e_acsel)
-
-    # exclude localities in the ocean
-
-    georef <- r_e_acsel_df
-    georef_layer <- cbind(georef, layer = raster::extract(reference_layer, georef, method = "bilinear"))
-    species_selected_coordinates <- georef_layer[stats::complete.cases(georef_layer$layer),]
-    names(species_selected_coordinates)[3] <- names(reference_layer)
-
-    # subset if altitude range is included
-
-    if (!is.null(layer_filter)) species_selected_coordinates <- species_selected_coordinates[species_selected_coordinates[,3] != layer_filter,]
-
-    n_entries_species <- nrow(Lon_Lat)
-    n_entries_clean <- nrow(species_selected_coordinates)
-    summary_clean_df <- data.frame(n_entries_raw = n_entries_species, n_entries_clean = n_entries_clean, km_resolution_merging = merge_dist*100, stringsAsFactors = FALSE)
-
-  ##########################################################################################
-
-  # bind summaries
-
-  n_entries_clean_bind <- do.call(rbind, summary_clean_df)
-
-  # return list
-
-  print(n_entries_clean_bind)
-  return(species_selected_coordinates)
+  #return table
+  return(coord_clean)
 
 }
+
+utils::globalVariables(".")
+

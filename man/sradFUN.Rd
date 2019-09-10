@@ -4,7 +4,7 @@
 \alias{sradFUN}
 \title{Wrapper around \code{Solar} function from package \code{EcoHydrology}}
 \usage{
-sradFUN(alt, tmax, tmin)
+sradFUN(alt, tmax, tmin, separator = "_")
 }
 \arguments{
 \item{alt}{Raster* object. Altitude raster.}
@@ -12,6 +12,8 @@ sradFUN(alt, tmax, tmin)
 \item{tmax}{Raster* object. Maximum temperature raster.}
 
 \item{tmin}{Raster* object. Minimum temperature raster.}
+
+\item{separator}{character. Character that separates variable names, and scenarios.}
 }
 \value{
 Returns a RasterLayer with estimates of Solar in kiloJoules by square meter by day.
@@ -20,20 +22,20 @@ Returns a RasterLayer with estimates of Solar in kiloJoules by square meter by d
 \code{sradFUN} Gets estimates of solar radiation for an area, based on maximum and minimum temperatures and altitude rasters by applying function \code{Solar} from package \code{EcoHydrology}
 }
 \examples{
+\dontrun{
 FulanusEcoRasters_present <-
   get_rasters(
-    raster_source = "/Users/gabriel/Documents/Mapinguari/global_grids_10_minutes",
-    ext = FulanusDistribution,
+    var = c('alt', 'prec', 'tmax', 'tmin'),
+    scenarios = c("present"),
+    source = "C:/Users/gabri/Dropbox/Mapinguari/global_grids_10_minutes",
+    ext = FulanusDistribution[c(2,3)],
     margin = 5,
-    non_fixed_var = c('prec', 'tmin', 'tmax'),
-    fixed_var = 'alt',
-    years = c("present"),
-    reorder = TRUE)
+    reorder = c(1, 10, 11, 12, 2, 3, 4, 5, 6, 7, 8, 9))
 
 alt <- FulanusEcoRasters_present$present$alt
-tmax <- FulanusEcoRasters_present$present[[25:36]]/10
-tmin <- FulanusEcoRasters_present$present[[13:24]]/10
+tmin <- FulanusEcoRasters_present$present[[25:36]]/10
+tmax <- FulanusEcoRasters_present$present[[13:24]]/10
 
 srad <- sradFUN(alt = alt, tmax = tmax, tmin = tmin)
-
+}
 }

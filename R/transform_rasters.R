@@ -1,127 +1,169 @@
-#' Transform environmental rasters in ecophysiological rasters.
+#' Transform raster values using custom calls.
 #'
-#' \code{transform_rasters} Get model predictions for a raster stack
+#' \code{transform_rasters} Applies custom expressions to transform the values of spatial rasters in a stack, taking into account temporal repetition of those rasters.
+#'
+#' @importFrom magrittr "%>%"
 #'
 #' @param raster_stack RasterStack. Stack with environmental layers.
-#' @param FUN_qlist list. A list of unevaluated expressions, as created by function qlist.
 #' @param separator character. Character that separates variable names, years and scenarios.
-#' @param alert integer. Plays a sound alert when function is done running. See documentation of package \code{beepr} for description of sound options.
+#' @param ncores integer. Number of cores to use in parallel processing.
+#' @param ... New rasters created.
 #'
 #' @return Returns a RasterStack with layers for the predictions required.
 #'
 #' @examples
-#'
+#' \dontrun{
 #' FulanusEcoRasters_present <-
 #'   get_rasters(
-#'     raster_source = "/Users/gabriel/Documents/Mapinguari/global_grids_10_minutes",
-#'     ext = FulanusDistribution,
+#'     var = c('prec', 'tmax', 'tmin'),
+#'     scenarios = 'present',
+#'     source = "C:/Users/gabri/Dropbox/Mapinguari/global_grids_10_minutes",
+#'     ext = FulanusDistribution[c(2,3)],
 #'     margin = 5,
-#'     non_fixed_var = c('prec', 'tmin', 'tmax'),
-#'     fixed_var = 'alt',
-#'     years = c("present"),
-#'     reorder = TRUE)
+#'     reorder = c(1, 10, 11, 12, 2, 3, 4, 5, 6, 7, 8, 9))
+#'
+#' # You can apply any function to subsets of rasters in the stack,
+#' # by selecting the layers with double brackets.
 #'
 #' transform_rasters(raster_stack = FulanusEcoRasters_present$present,
-#'   FUN = qlist(total_1sem = sum(tmax[[1:6]]),
-#'     mean_1sem = mean(tmax[[1:6]]),
-#'     sd_1sem = sd(tmax[[1:6]]),
-#'     total_2sem = sum(tmax[[7:12]]),
-#'     mean_2sem = mean(tmax[[7:12]]),
-#'     sd_2sem = sd(tmax[[7:12]])),
-#'   separator = '_',
-#'   alert = NULL)
-#'
+#'     total_1sem = sum(tmax[1:6]),
+#'     mean_1sem = mean(tmax[1:6]),
+#'     sd_1sem = sd(tmax[1:6]),
+#'     total_2sem = sum(tmax[7:12]),
+#'     mean_2sem = mean(tmax[7:12]),
+#'     sd_2sem = sd(tmax[7:12]))
+#'}
 #' @export
 
-transform_rasters <- function(raster_stack,
-  FUN_qlist,
-  separator = '_',
-  alert = NULL){
+transform_rasters <-
+  function(raster_stack,
+           separator = '_',
+           ncores = 1,
+           ...){
 
-  split_vars <-
-    raster_stack %>%
-    names() %>%
-    stringr::str_split(separator) %>%
-    lapply(`[`, 1)
+    transform_expr <- as.list(substitute(list(...))[-1])
 
-  unique_split_vars <- unique(split_vars)
+    template_raster <- raster_stack[[1]]
+    cl <- parallel::makeCluster(ncores)
+    on.exit(parallel::stopCluster(cl))
 
-  separate_list <-
-    lapply(unique_split_vars, function(y){
+    split_vars <-
+      raster_stack %>%
+      names() %>%
+      stringr::str_split(separator) %>%
+      lapply(`[`, 1)
 
-      which(split_vars == y) %>%
-        raster_stack[[.]] %>%
-        raster::stack()
-    }
-    )
+    split_ind <-
+      raster_stack %>%
+      names() %>%
+      stringr::str_split(separator) %>%
+      lapply(`[`, 2)
 
-  names(separate_list) <- unique_split_vars
+    unique_split_vars <-
+      unique(split_vars) %>%
+      unlist
 
-  for (i in 1:length(separate_list)) assign(names(separate_list)[i], separate_list[[i]])
+    unique_split_ind <-
+      unique(split_ind) %>%
+      unlist %>%
+      `[`(., !is.na(.))
 
-  output <-
-    lapply(FUN_qlist, function(ww){
+    separate_list <-
+      lapply(unique_split_vars, function(y){
 
-      FUN_list <- as.list(ww)
+        which(split_vars == y) %>%
+          raster_stack[[.]] %>%
+          raster::stack()
+      })
 
-      actualFUN <- eval(FUN_list[[1]])
+    raster_value_list <- list(lapply(separate_list, raster::values))
 
-      arguments <- if (inherits(FUN_list[-1], "list")) {
-        lapply(FUN_list[-1], eval, parent.frame(n = 2))
-        } else {
-        lapply(list(FUN_list[-1]), eval, parent.frame(n = 2))
+    output <-
+      lapply(1:length(transform_expr), function(ww){
+
+        current_call <- transform_expr[[ww]]
+
+        call_obj_in <-
+          as.list(current_call)
+
+        call_obj_out <- NULL
+
+        success <- FALSE
+
+        while (!success) {
+
+          call_obj_out <-
+            call_obj_in %>%
+            lapply(as.list) %>%
+            unlist
+
+          success <- identical(call_obj_in, call_obj_out)
+
+          call_obj_in <- call_obj_out
+
+        }
+
+        call_obj_name <-
+          call_obj_out %>%
+          lapply(function(yy){
+            class(yy) == 'name'
+          }) %>%
+          unlist %>%
+          call_obj_out[.]
+
+        exist_ind <-
+          call_obj_name %>%
+          lapply(function(yy){
+            try(eval(yy), silent = TRUE) %>%
+              class %>%
+              `!=`(., "try-error")
+          }) %>%
+          unlist
+
+        call_obj <-
+          call_obj_name[exist_ind] %>%
+          lapply(paste) %>%
+          unlist
+
+          lapply(raster_value_list, function(z){
+
+            parallel::clusterExport(cl, varlist = c(call_obj, "current_call", "unique_split_vars", "z"), envir = environment())
+
+            output_values <-
+              parallel::parSapply(cl, 1:nrow(z[[1]]), function(i){
+
+                for (j in 1:length(unique_split_vars)) {
+                  assign(unique_split_vars[j], z[[j]][i,], inherits = TRUE)
+                }
+
+                eval(current_call)
+
+              })
+
+            if(is.matrix(output_values)) {
+
+              template_raster <- raster::stack(replicate(nrow(output_values), template_raster))
+
+              output_values_df <- data.frame(t(output_values))
+
+              for(nl in 1:nrow(output_values)) raster::values(template_raster[[nl]]) <- output_values_df[[nl]]
+
+              names(template_raster) <- paste(names(transform_expr)[ww], unique_split_ind, sep = separator)
+
+            } else {
+
+            raster::values(template_raster) <- output_values
+            names(template_raster) <- names(transform_expr)[ww]
+
+            }
+
+            template_raster
+          })
+
+      })
+
+    return(raster::stack(unlist(output)))
+
   }
 
-      isRaster <- lapply(arguments, function(y) class(eval(y)) == 'RasterStack' | class(eval(y)) == 'RasterLayer' | class(eval(y)) == 'RasterBrick') %>% unlist()
-
-      raster_args <- lapply(arguments[isRaster], eval)
-      args_stack <- raster::stack(raster_args)
-      other_args <-  lapply(arguments[!isRaster], eval)
-
-      raster_lengths <- unlist(lapply(raster_args, raster::nlayers))
-
-      durations <- lapply(raster_lengths, function(z) 1:z)
-      start_ind <- lapply(1:length(raster_lengths), function(i) sum(raster_lengths[1:i][-i]))
-
-      index_list <- lapply(1:length(raster_lengths), function(i) start_ind[[i]] + durations[[i]])
-
-      adaptedFUN <- function(yy, args, .FUN){
-
-          call_list_rasters <-
-            lapply(index_list, function(z) yy[z])
-
-          names(call_list_rasters) <- names(raster_args)
-
-          call_list <- append(call_list_rasters, args)
-
-          do.call(what = .FUN, args = call_list)
-
-      }
-
-      formals(adaptedFUN)$args <- other_args
-      formals(adaptedFUN)$.FUN <- actualFUN
-
-      ncores <- parallel::detectCores() - 1
-      raster::beginCluster(ncores, type = 'SOCK')
-
-      transformed_rasters <- try(raster::clusterR(x = args_stack, fun = raster::overlay,  args = list(fun = adaptedFUN)), silent = TRUE)
-
-      if (class(transformed_rasters) == 'try-error') print("trying not parallelized version")
-
-      if (class(transformed_rasters) == 'try-error') transformed_rasters <- raster::overlay(args_stack, fun = adaptedFUN)
-
-      raster::endCluster()
-
-      names(transformed_rasters) <- ifelse(names(transformed_rasters) == 'layer', paste(paste(ww), collapse = separator), names(transformed_rasters))
-
-      transformed_rasters
-
-    })
-
-  for (i in 1:length(output)) { names(output[[i]]) <-  paste(names(FUN_qlist)[[i]], 1:raster::nlayers(output[[i]]), sep = separator) }
-
-  if (!is.null(alert)) {beepr::beep(alert)}
-
-  return(raster::stack(output))
-
-}
+utils::globalVariables(".")

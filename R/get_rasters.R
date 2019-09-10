@@ -1,420 +1,153 @@
-#' Retrieve and organize spatial environmental information.
+#' Retrieve and organize spatial rasters.
 #'
-#' \code{get_rasters} returns an organized list of environmental rasters.
+#' \code{get_rasters} Loads rasters from directory and returns them in an organized list of specified scenarios.
 #'
 #' @importFrom magrittr "%>%"
 #'
-#' @param raster_source character or list of RasterStack. You can either input a path to a folder with the required rasters or a list of RasterStack organized by year/scenario.
-#' @param ext numeric vector or dataframe with coordinates. Extension to crop rasters. Input can be either a vector with limiting latitudes and longitudes or a table of coordinates. In case the input is a numeric vector, the order of values should be: western most longitude, easter most longitude, southern most latitude then northern most latitude. Longitude values west of GMT and latitude values south of equator are distinguished by a negative sign. In case the input is a table of coordinates, the points further in each direction will determine the extent for cropping.
+#' @param var character. Names of variables to be loaded.
+#' @param scenario character. Names of scenarios for the variables.
+#' @param raster_path character. Path to folder with raster files. See \code{\link[raster]{writeFormats}} for supported formats
+#' @param ext numeric, data. frame or Extent object. Extent to crop rasters.
+#' @param coord_col character. Names of columns containing Longitude and Latitude.
 #' @param margin numeric. Additional distance to be added to margin of extent, in degrees.
-#' @param resolution numeric. Spatial resolution of rasters, in degrees. This is used for downloading only.
-#' @param non_fixed_var character vector. Names of the time varying variables to be outputed. This variables will be subject to variation according to argument `years`.
-#' @param fixed_var character vector. Names of the time fixed variables to be outputed. This variables will not be subject to variation according to argument `years`.
-#' @param years character vector. Names of years for time varying variables.
-#' @param scenarios character vector. Names of future scenarios to for time varying variables.
-#' @param baseline character vector. Names of years not subject to scenarios.
-#' @param separator character. Character that separates variable names, years and scenarios.
-#' @param projection_model character. Projection model for future variables. Must be any model accepted in \code{raster::getData}
-#' @param reorder logical. If TRUE, will use last two characters of layer names in RasterStacks with 12 layers to order them in ascending order.
-#' @param download_source character. Where to download rasters from. Default is 'pkg-raster' which will get rasters from WorldClim, using package 'raster' functions.
-#' @param alert integer. Plays a sound alert when function is done running. See documentation of package beepr for description of sound options.
+#' @param separator character. Character that separates variable names and scenario names.
 #'
 #' @return Returns a list of raster stacks for the variables required, organized by year/scenario combination.
 #'
 #' @examples
-#'
-#'# Fulanus_Ecorasters_download <-
-#'#   get_rasters(
-#'#     ext = FulanusDistribution,
-#'#     margin = 5,
-#'#     non_fixed_var = c('prec', 'tmin', 'tmax'),
-#'#     years = c("present", '2050', '2070'),
-#'#     scenarios = c('rcp26', 'rcp45', 'rcp85'),
-#'#     alert = 6)
-#'
-#' Fulanus_Ecorasters_dir <-
+#' \dontrun{
+#' Fulanus_Ecorasters_present <-
 #'   get_rasters(
-#'     raster_source = "/Users/gabriel/Documents/Mapinguari/global_grids_10_minutes",
-#'     ext = FulanusDistribution,
-#'     margin = 5,
-#'     non_fixed_var = c('prec', 'tmin', 'tmax'),
-#'     fixed_var = "alt",
-#'     years = c("present", '2050', '2070'),
-#'     scenarios = c('rcp26', 'rcp45', 'rcp85'),
-#'     reorder = TRUE,
-#'     alert = 4)
-#'
-#'
+#'     var = c('prec', 'tmin', 'tmax'),
+#'     scenario = 'present',
+#'     raster_path = "C:/Users/gabri/Dropbox/Mapinguari/global_grids_10_minutes",
+#'     ext = FulanusDistribution[c(2,3)],
+#'     margin = 5)
+#' }
 #' @export
 
-get_rasters <- function(raster_source = NULL,
-  ext = c(-180, 180, -60, 90),
-  margin = 0,
-  resolution = 10,
-  non_fixed_var = NULL,
-  fixed_var = NULL,
-  years = 'present',
-  scenarios = NULL,
-  baseline = "present",
-  separator = '_',
-  projection_model = 'MP',
-  reorder = FALSE,
-  download_source = 'pkg-raster',
-  alert = NULL
+# rename load_rasters?
+
+get_rasters <- function(var = NULL,
+                        scenario = NULL,
+                        raster_path = NULL,
+                        ext = c(-180, 180, -60, 90),
+                        coord_col = c("Lon", "Lat"),
+                        margin = 0,
+                        separator = '_'
 ) {
 
-  # Select extent by species distribution
+  # Select extent by extent object, vector or data frame with coordinates
 
-  if (class(ext) == "numeric") {
+  ext_format <- switch(class(ext),
+                       Extent = ext,
+                       numeric = raster::extent(ext),
+                       data.frame = raster::extent(min(ext$Lon),
+                                                   max(ext$Lon),
+                                                   min(ext$Lat),
+                                                   max(ext$Lat)))
 
-    ext <- raster::extent(ext)
+  # add margins
 
+  ext_margin <- ext_format
+  ext_margin[1] <- ext_format[1] - margin
+  ext_margin[2] <- ext_format[2] + margin
+  ext_margin[3] <- ext_format[3] - margin
+  ext_margin[4] <- ext_format[4] + margin
+
+  # compile table with variable and scenario names
+
+  var_table <-
+    list.files(raster_path) %>%
+    strsplit(separator) %>%
+    lapply(function(x) c(x[1], paste0(x[-1], collapse = separator))) %>%
+    do.call(rbind, .) %>%
+    data.frame %>%
+    cbind(1:nrow(.))
+
+  #if var or scenario are NULL, select all in list
+
+  if (is.null(var)) {
+    var_checked <- unique(var_table[,1])
+  } else {
+    var_checked <- var
   }
 
-  if (class(ext) == "data.frame" ) {
-
-    ext <- raster::extent(min(ext$Lon), max(ext$Lon), min(ext$Lat), max(ext$Lat))
-
+  if (is.null(scenario)) {
+    scenario_checked <- unique(var_table[,2])
+  } else {
+    scenario_checked <- unique(c("", scenario))
   }
 
-  ext[1] <- ext[1] - margin
-  ext[2] <- ext[2] + margin
-  ext[3] <- ext[3] - margin
-  ext[4] <- ext[4] + margin
+  # narrow down to variables and scenario selected
 
-  # Creates combinations of variables, years and scenarios, accounting for if they vary in time or if they are subject to scenarios.
+  var_table_select <- var_table[var_table[,1] %in% var_checked & var_table[,2] %in% scenario_checked,]
 
-  vys_table <- VYScomb(years,
-    scenarios,
-    non_fixed_var, fixed_var, baseline, separator)
-
-  # Download required rasters
-
-  if (is.null(raster_source)) {
+  # load selected surfaces
 
   stack_list <-
-    download_rasters(
-      vys_table = vys_table,
-      baseline = baseline,
-      resolution = resolution,
-      projection_model = projection_model,
-      download_source = download_source)
-
-  } else {
-
-  stack_list <- FetchRasters(raster_source, vari = vys_table$vys_names, separator = separator)
-
-  }
+    var_table_select[,3] %>%
+    `[`(list.files(raster_path, full.names = T), .) %>%
+    lapply(function(x) list.files(x,
+                                  pattern = '*.grd$|*.asc$|*.sdat$|*.rst$|*.nc$|*.tif$|*.envi$|*.bil$|*.img$',
+                                  full.names = T,
+                                  ignore.case = TRUE) %>%
+             raster::stack())
 
   # crop rasters
 
-  cropped_raster_list <- lapply(stack_list[!is.na(stack_list)], function(x){
+  stack_list_cropped <- lapply(stack_list, raster::crop, ext_margin, snap = "out")
 
-    raster::stack(raster::crop(x, ext))
+  # stack rasters by scenario
 
-  } # close function
-  ) # close lapply
+  stack_list_stacked <-
+    lapply(unique(var_table_select[ ,2]), function(x){
 
-  # if reorder is 'TRUE', reorder layers by the last two digits
+      which(var_table_select[ ,2] == x) %>%
+        stack_list_cropped[.] %>%
+        raster::stack()
 
-  if (reorder == TRUE) {
+    })
 
-    cropped_raster_list <-
-      lapply(cropped_raster_list, function(x){
+  names(stack_list_stacked) <- unique(var_table_select[ ,2])
 
-        x %>%
-          names() %>%
-          stringr::str_sub(., -2) %>%
-          qdap::mgsub(letters, 0, .) %>%
-          order() %>%
-          `[[`(x, .)
+  # stack constant rasters to other stacks
 
-      } # close function
-      ) # close lapply
+  # if there are rasters other than constant
+
+  if (any(var_table_select[, 2] != "")) {
+
+  #if there are constant rasters
+
+  if ("" %in% var_table_select[, 2]) {
+
+    constant_stack <-
+      stack_list_stacked[unique(var_table_select[, 2]) == ""] %>%
+      raster::stack()
+
+    final_stack <-
+      stack_list_stacked[unique(var_table_select[, 2]) != ""] %>%
+      lapply(function(x) raster::stack(x, constant_stack))
+
+  } else {
+
+  # if there are no constant rasters
+
+    final_stack <- stack_list_stacked[unique(var_table_select[, 2]) != ""]
 
   }
+  } else {
 
-  # rename monthly layers, so they are in standard format
+  # is there are only constant rasters
 
-  month_names <-
-    plyr::alply(names(cropped_raster_list), 1, function(x, sep_in = separator){
-
-      strsplit(x, sep_in) %>%
-        `[[`(1) %>%
-        `[`(1) %>%
-        paste(1:12, sep = sep_in)
-
-    } # close function
-    ) # close alply
-
-  renamed_raster_list <-
-    plyr::alply(1:length(cropped_raster_list), 1, function(i){
-
-      is_month <-
-        cropped_raster_list[[i]] %>%
-        names() %>%
-        length() %>%
-        `==`(12)
-
-      if (is_month) {
-
-        names(cropped_raster_list[[i]]) <- month_names[[i]]
-
-        cropped_raster_list[[i]]
-
-      } else {
-
-        cropped_raster_list[[i]]
+    final_stack <- stack_list_stacked
 
       }
 
-    } # close function
-    ) # close alply
+  if (is.null(scenario)) final_stack <- final_stack[[1]]
 
-  names(renamed_raster_list) <- names(cropped_raster_list)
-
-  # stack rasters by combination of year/scenario
-
-  years_scenarios_list <-
-    paste(vys_table$years,
-      vys_table$scenarios,
-      sep = separator) %>%
-    gsub("_NA", "", .) %>%
-    split(vys_table, .)
-
-  grouped_rasters <-
-    lapply(years_scenarios_list, function(x){
-
-      renamed_raster_list %>%
-        names() %>%
-        match(x$vys_names, .) %>%
-        `[`(renamed_raster_list, .) %>%
-        unlist() %>%
-        raster::stack()
-
-    } # close function
-    ) # close lapply
-
-  # appends a copy of 'fixed' variables to every stack
-
-  names(years_scenarios_list)[names(years_scenarios_list) == 'NA'] <- "fixed"
-
-  names(grouped_rasters) <- names(years_scenarios_list)
-
-  if (length(grouped_rasters) == 1 & names(grouped_rasters) == 'fixed') {
-
-    final_list <- grouped_rasters
-
-    } else {
-
-      final_list <-
-      grouped_rasters %>%
-    names() %>%
-    `!=`('fixed') %>%
-    `[`(grouped_rasters, .) %>%
-    lapply(., function(x){
-
-      raster::stack(x, grouped_rasters[["fixed"]])
-
-    } # close function
-    ) # close lapply
-} # close else
-
-  names(final_list) <- names(years_scenarios_list)[names(years_scenarios_list) != 'fixed']
-
-  if (!is.null(alert)) {beepr::beep(alert)}
-
-  return(final_list)
+  return(final_stack)
 
 }
-
-# --------------------------------------------------------------------------------------
-# Internal functions -------------------------------------------------------------------
-# --------------------------------------------------------------------------------------
-
-# VYScomb --------------------------------------------------------------------------------------
-
-# Internal function. Creates combinations of variables, years and scenarios, preserving instances when year or scenario doesn't apply. Outputs a reference table of combinations. VYS stands for variable, year, scenario.
-
-VYScomb <- function(years = NA,
-  scenarios = NA,
-  non_fixed_var = NA,
-  fixed_var = NA,
-  baseline = "present",
-  separator = '_') {
-
-  if (is.null(non_fixed_var[1])) return(data.frame(vys_names = fixed_var, vars = NA, years = NA, scenarios = NA, stringsAsFactors = FALSE))
-
-  vys_names <-
-    setdiff(years, baseline) %>%
-    outer(scenarios, paste, sep = separator) %>%
-    c(intersect(years, baseline)) %>%
-    outer(non_fixed_var, ., paste, sep = separator) %>%
-    {if (is.null(fixed_var[1])) { c(.) } else {c(., fixed_var) }} %>%
-    gsub("_NA", "", .)
-
-  len_seq <-
-    strsplit(vys_names, separator) %>%
-    sapply(length) %>%
-    max() %>%
-    seq()
-
-  vys_table <-
-    strsplit(vys_names, separator) %>%
-    sapply('[', len_seq) %>%
-    t() %>%
-    tibble::as.tibble()
-
-  if (ncol(vys_table) == 1) vys_table[, c(2, 3)] <- NA
-  if (ncol(vys_table) == 2) vys_table[, 3] <- NA
-
-  column_names <-
-    c("vars" ,
-      "years",
-      "scenarios")
-
-  names(vys_table) <- column_names
-
-  vys_table$vys_names <- vys_names
-
-  return(vys_table)
-
-}
-
-# Fetch functions -------------------------------------------------------------------------------
-# Fetch functions are internal functions that try to find the variables supplied by the user in the raster source
-
-FetchRasters <- function(raster_source, vari, separator){
-
-  FetchPath <- function(raster_path, vari){
-
-    # Test if path is one global folder with subfolders for each variable. If it is, return a vector with subfolders as reference, if not just return vector with paths
-
-    if (length(raster_path) == 1) {
-      raster_lookup <- list.dirs(raster_path, full.names = TRUE)[-1] # [-1] is because the first element is the parent directory
-    } else {
-      raster_lookup <- raster_path
-    }
-
-    success_message <- paste("Variable", vari, "successfully loaded from input!")
-    not_found_message <- paste("Variable", vari, "not found on input!")
-    # Try to find variable in raster source, if not possible, return NA
-
-    tryCatch({
-
-      input_raster <-
-        raster_lookup %>%
-        stringr::str_which(vari) %>%
-        raster_lookup[[.]] %>%
-        list.files(pattern = '*.bil$|*.tif$|*.gri$', full.names = T, ignore.case = TRUE) %>%
-        raster::stack()
-
-      message(success_message)
-
-      return(input_raster)
-
-    }, error = function(not_found_message){
-      message(not_found_message)
-      return(NA)
-    })
-
-  }
-
-  FetchList <- function(raster_list, vari, separator) {
-
-    success_message <- paste("Variable", vari, "successfully loaded from input!")
-    not_found_message <- paste("Variable", vari, "not found on input!")
-
-    split_vari <-
-      strsplit(vari, separator)[[1]]
-
-    year_scenario <- ifelse(length(split_vari) == 3, paste(split_vari[2], split_vari[3], sep = separator), split_vari[2])
-
-    tryCatch({
-
-    input_raster <-
-    raster_list[[year_scenario]] %>%
-      names() %>%
-      stringr::str_which(split_vari[1]) %>%
-      raster_list[[year_scenario]][[.]] %>%
-      raster::stack()
-
-    message(success_message)
-
-    return(input_raster)
-
-    }, error = function(not_found_message){
-      message(not_found_message)
-      return(NA)
-
-    }) # close tryCatch
-
-  }
-
-  stack_list <- switch(class(raster_source),
-
-    character = lapply(vari, FetchPath, raster_path = raster_source),
-
-    list = lapply(vari, FetchList, raster_list = raster_source, separator = separator)
-
-  )
-
-  names(stack_list) <- vari
-
-  return(stack_list)
-
-}
-
-### download
-
-download_rasters <- function(
-  vys_table,
-  baseline,
-  resolution = 10,
-  projection_model = 'MP',
-  download_source = 'pkg-raster') {
-
-  if (download_source == 'pkg-raster') {
-
-    vys_table$dataset <- vys_table$years
-
-    vys_table$dataset[vys_table$dataset == '2050' | vys_table$dataset == '2070'] <- 'CMIP5'
-    vys_table$dataset[vys_table$dataset == baseline] <- 'worldclim'
-    vys_table$years[vys_table$years == '2050'] <- 50
-    vys_table$years[vys_table$years == '2070'] <- 70
-    vys_table$scenarios[vys_table$scenarios == 'rcp26'] <- 26
-    vys_table$scenarios[vys_table$scenarios == 'rcp45'] <- 45
-    vys_table$scenarios[vys_table$scenarios == 'rcp60'] <- 60
-    vys_table$scenarios[vys_table$scenarios == 'rcp85'] <- 85
-
-    vys_table_download <- vys_table[vys_table$vars == 'tmin' |
-        vys_table$vars == 'tmax' |
-        vys_table$vars == 'prec' |
-        vys_table$vars == 'bio', ]
-
-    stack_list <-
-      plyr::alply(vys_table_download, 1, function(x) {
-
-        if (x$years == baseline) {
-
-          raster::getData(name = x$dataset, var = x$vars, res = resolution)
-
-        } else {
-
-          raster::getData(name = x$dataset, var = x$vars, year = x$years, rcp = x$scenarios, res = resolution, model = projection_model)
-
-        }
-
-      } # close function
-      ) # close alply
-
-    names(stack_list) <- vys_table_download$vys_names
-
-  }
-
-  return(stack_list)
-
-}
-
 
 utils::globalVariables(".")
