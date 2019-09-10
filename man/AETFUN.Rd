@@ -17,7 +17,7 @@ AETFUN(PET, prec, separator = "_")
 Returns a RasterLayer with estimates of Actual EvapoTranspiration in milimiters.
 }
 \description{
-\code{AETFUN} Applies Duncan Golicher's Bucket model to Potential EvapoTranspiration and precipitation rasters in order to get Actual Evapotranspiration estimates for an area.
+\code{AETFUN} Applies Duncan Golicher's Bucket model to Potential EvapoTranspiration and precipitation rasters in order to get Actual Evapotranspiration estimates for an area (Vaca, Raul A., and Duncan J. Golicher. "Integration of water balance in the modeling of the distribution of mexican tree species." Botanical Sciences 94.1 (2016): 25-42.).
 }
 \examples{
 \dontrun{

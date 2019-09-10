@@ -17,7 +17,7 @@ PC2FMFUN(prec, temp, alt)
 numeric. Fire frequency based on physical chemical factors
 }
 \description{
-\code{PC2FMFUN} Applies Guyette's Fire frequency model (reference)
+\code{PC2FMFUN} Applies Guyette's Fire frequency model (Guyette, Richard P., et al. "Predicting fire frequency with chemistry and climate." Ecosystems 15.2 (2012): 322-335.)
 }
 \examples{
 PC2FMFUN(50, 25, 1000)

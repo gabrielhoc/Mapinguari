@@ -181,7 +181,7 @@ PETFUN <- function(tmax, tmin, alt, separator = "_") {
 
 #' Generates Actual EvapoTranspiration rasters
 #'
-#' \code{AETFUN} Applies Duncan Golicher's Bucket model to Potential EvapoTranspiration and precipitation rasters in order to get Actual Evapotranspiration estimates for an area.
+#' \code{AETFUN} Applies Duncan Golicher's Bucket model to Potential EvapoTranspiration and precipitation rasters in order to get Actual Evapotranspiration estimates for an area (Vaca, Raul A., and Duncan J. Golicher. "Integration of water balance in the modeling of the distribution of mexican tree species." Botanical Sciences 94.1 (2016): 25-42.).
 #'
 #' @param PET RasterStack with 12 layers. Total month Potential EvapoTranspiration rasters.
 #' @param prec RasterStack with 12 layers. Total month precipitation rasters.
