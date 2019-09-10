@@ -337,7 +337,7 @@ sradFUN <- function(alt, tmax, tmin, separator = "_") {
 
 #' Physical Chemistry Fire Frequency Model (PC2FM) by Guyette (2012)
 #'
-#' \code{PC2FMFUN} Applies Guyette's Fire frequency model (reference)
+#' \code{PC2FMFUN} Applies Guyette's Fire frequency model (Guyette, Richard P., et al. "Predicting fire frequency with chemistry and climate." Ecosystems 15.2 (2012): 322-335.)
 #'
 #' @param prec numeric. Precipitation raster.
 #' @param temp numeric. Temperature raster.
@@ -363,7 +363,7 @@ PC2FMFUN <- function(prec, temp, alt){
 
 #' Sinervo (2010) hours of activity model
 #'
-#' \code{sin_h} Simulates daily variation in temperature and counts amount of time above a temperature threshold, as seen in Sinervo (2010).
+#' \code{sin_h} Simulates daily variation in temperature and counts amount of time above a temperature threshold, as seen in Sinervo, Barry, et al. "Erosion of lizard diversity by climate change and altered thermal niches." Science 328.5980 (2010): 894-899.
 #'
 #' @param tmax Raster* object. Maximum temperature raster.
 #' @param tmin Raster* object. Minimum temperature raster.
