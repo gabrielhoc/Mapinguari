@@ -25,7 +25,7 @@ Data frame with remaining longitudes and latitudes.
 \code{clean_points} Eliminates species occurrence records that are too close to each other or at undesired locations.
 }
 \examples{
-
+\dontrun{
 #First, we need to obtain an altitude raster to filter by altitude.
 library(raster)
 alt <- raster::getData("alt", country = "BRA", mask = TRUE)
@@ -35,5 +35,5 @@ alt <- raster::getData("alt", country = "BRA", mask = TRUE)
   clean_points(coord = TtorquatusDistribution,
                merge_dist = 20000,
                filter_layer = !is.na(alt))
-
+}
 }
