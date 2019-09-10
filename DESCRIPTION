@@ -15,9 +15,6 @@ BugReports: http://github.com/gabrielhoc/Mapinguari/issues
 Suggests:
     EcoHydRology,
     geosphere,
-    ggmap,
-    ggplot2,
-    mgcv,
 Imports:
     dplyr,
     magrittr,
