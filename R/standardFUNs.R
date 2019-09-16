@@ -89,7 +89,7 @@ rhFUN <- function(temp, vapor) {
 
 }
 
-#' Wrapper around \code{PET_fromTemp} function from package \code{EcoHydrology}
+#' Spatialize \code{PET_fromTemp} function from package \code{EcoHydrology}
 #'
 #' \code{PETFUN} Gets Potential EvapoTranspiration (PET) rasters from maximum temperature, minimum temperature and altitude rasters by applying function \code{PET_fromTemp} from package \code{EcoHydrology}
 #'
@@ -181,7 +181,7 @@ PETFUN <- function(tmax, tmin, alt, separator = "_") {
 
 #' Generates Actual EvapoTranspiration rasters
 #'
-#' \code{AETFUN} Applies Duncan Golicher's Bucket model to Potential EvapoTranspiration and precipitation rasters in order to get Actual Evapotranspiration estimates for an area (Vaca, Raul A., and Duncan J. Golicher. "Integration of water balance in the modeling of the distribution of mexican tree species." Botanical Sciences 94.1 (2016): 25-42.).
+#' \code{AETFUN} Applies Duncan Golicher's Bucket model to Potential EvapoTranspiration and precipitation rasters in order to get Actual Evapotranspiration estimates for an area (Golicher, 2012).
 #'
 #' @param PET RasterStack with 12 layers. Total month Potential EvapoTranspiration rasters.
 #' @param prec RasterStack with 12 layers. Total month precipitation rasters.
@@ -248,7 +248,7 @@ AETFUN <- function(PET, prec, separator = "_") {
 
 }
 
-#' Wrapper around \code{Solar} function from package \code{EcoHydrology}
+#' Spatialize \code{Solar} function from package \code{EcoHydrology}
 #'
 #' \code{sradFUN} Gets estimates of solar radiation for an area, based on maximum and minimum temperatures and altitude rasters by applying function \code{Solar} from package \code{EcoHydrology}
 #'
@@ -335,9 +335,9 @@ sradFUN <- function(alt, tmax, tmin, separator = "_") {
 
 }
 
-#' Physical Chemistry Fire Frequency Model (PC2FM) by Guyette (2012)
+#' Guyette's Physical Chemistry Fire Frequency Model (PC2FM)
 #'
-#' \code{PC2FMFUN} Applies Guyette's Fire frequency model (Guyette, Richard P., et al. "Predicting fire frequency with chemistry and climate." Ecosystems 15.2 (2012): 322-335.)
+#' \code{PC2FMFUN} Applies Guyette's Fire frequency model (Guyette et al, 2012).
 #'
 #' @param prec numeric. Precipitation raster.
 #' @param temp numeric. Temperature raster.
@@ -363,7 +363,7 @@ PC2FMFUN <- function(prec, temp, alt){
 
 #' Sinervo (2010) hours of activity model
 #'
-#' \code{sin_h} Simulates daily variation in temperature and counts amount of time above a temperature threshold, as seen in Sinervo, Barry, et al. "Erosion of lizard diversity by climate change and altered thermal niches." Science 328.5980 (2010): 894-899.
+#' \code{sin_h} Simulates daily variation in temperature and counts amount of time above a temperature threshold, as seen in Sinervo et al. 2010.
 #'
 #' @param tmax Raster* object. Maximum temperature raster.
 #' @param tmin Raster* object. Minimum temperature raster.
