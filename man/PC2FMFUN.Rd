@@ -2,7 +2,7 @@
 % Please edit documentation in R/standardFUNs.R
 \name{PC2FMFUN}
 \alias{PC2FMFUN}
-\title{Physical Chemistry Fire Frequency Model (PC2FM) by Guyette (2012)}
+\title{Guyette's Physical Chemistry Fire Frequency Model (PC2FM)}
 \usage{
 PC2FMFUN(prec, temp, alt)
 }
@@ -17,7 +17,7 @@ PC2FMFUN(prec, temp, alt)
 numeric. Fire frequency based on physical chemical factors
 }
 \description{
-\code{PC2FMFUN} Applies Guyette's Fire frequency model (Guyette, Richard P., et al. "Predicting fire frequency with chemistry and climate." Ecosystems 15.2 (2012): 322-335.)
+\code{PC2FMFUN} Applies Guyette's Fire frequency model (Guyette et al, 2012).
 }
 \examples{
 PC2FMFUN(50, 25, 1000)

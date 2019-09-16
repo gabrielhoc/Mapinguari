@@ -2,7 +2,7 @@
 % Please edit documentation in R/standardFUNs.R
 \name{sradFUN}
 \alias{sradFUN}
-\title{Wrapper around \code{Solar} function from package \code{EcoHydrology}}
+\title{Spatialize \code{Solar} function from package \code{EcoHydrology}}
 \usage{
 sradFUN(alt, tmax, tmin, separator = "_")
 }

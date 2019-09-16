@@ -16,6 +16,8 @@
 #'
 #' @examples
 #' \dontrun{
+#' # replace rasterpath with the directory on your computer containing worldclim data
+#'
 #' Fulanus_Ecorasters_present <-
 #'   get_rasters(
 #'     var = c('prec', 'tmin', 'tmax'),

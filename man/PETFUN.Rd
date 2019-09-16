@@ -2,7 +2,7 @@
 % Please edit documentation in R/standardFUNs.R
 \name{PETFUN}
 \alias{PETFUN}
-\title{Wrapper around \code{PET_fromTemp} function from package \code{EcoHydrology}}
+\title{Spatialize \code{PET_fromTemp} function from package \code{EcoHydrology}}
 \usage{
 PETFUN(tmax, tmin, alt, separator = "_")
 }
