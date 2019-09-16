@@ -144,7 +144,7 @@ get_predict <- function(
   output_stats <-
     data.frame(logLik = logLik, AIC = AIC, BIC = BIC, dAIC, dBIC, rankAIC, rankBIC)
 
-  print(output_stats)
+  message(output_stats)
 
   if (length(predict_list) > 1) {predict_list} else {predict_list[[1]]}
 

@@ -59,7 +59,7 @@ clean_points <- function(coord,
   # print summary
   rbind(n_entries_species = nrow(coord),
         n_entries_clean = nrow(coord_clean)) %>%
-    print
+    message
 
   #return table
   return(coord_clean)

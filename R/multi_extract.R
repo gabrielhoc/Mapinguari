@@ -48,7 +48,7 @@ multi_extract <- function(raster_path,
 
   lapply(selected_folders, function(x) {
 
-    cat('\n\nfolder:', x)
+    message('\n\nfolder:', x)
 
     file_names <-
       paste(raster_path, x, sep = '/') %>%
