@@ -5,16 +5,14 @@ Version: 1.0.0
 Authors@R: c(person("Gabriel", "Caetano", email = "gabrielhoc@gmail.com", role = c("aut", "cre")),
              person("Juan", "Santos", email = "infraguttatus@gmail.com", role = c("aut")),
              person("Barry", "Sinervo", email = "lizardrps@gmail.com", role = c("aut")))
-Description: Tools to facilitate the incorporation of biological processes in biogeographical analyses. It offers conveniences in fitting, comparing and extrapolating models of biological processes such as physiology and phenology. These spatial extrapolations can be informative by themselves, but also complement traditional correlative species distribution models, by mixing environmental and process-based predictors. 
-             Guyette et al (2012) <doi:10.1007/s10021-011-9512-0>.
-             Golicher (2012) <https://duncanjg.wordpress.com/2012/11/29/building-more-informative-climate-layers-for-species-distribution-modelling/>.
+Description: Tools to facilitate the incorporation of biological processes in biogeographical analyses. It offers conveniences in fitting, comparing and extrapolating models of biological processes such as physiology and phenology. These spatial extrapolations can be informative by themselves, but also complement traditional correlative species distribution models, by mixing environmental and process-based predictors.
              Sinervo et al (2010) <doi:10.1126/science.1184695>.
 Depends: R (>= 3.5)
 License: GPL-2
 Encoding: UTF-8
 LazyData: true
-URL: http://github.com/gabrielhoc/Mapinguari
-BugReports: http://github.com/gabrielhoc/Mapinguari/issues
+URL: https://github.com/gabrielhoc/Mapinguari
+BugReports: https://github.com/gabrielhoc/Mapinguari/issues
 Suggests:
     geosphere,
     mgcv
