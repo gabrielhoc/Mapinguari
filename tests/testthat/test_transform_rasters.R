@@ -24,14 +24,14 @@ test_that("transform_rasters works", {
 
   library(mgcv)
 
-   Perf_rasters <-
-   transform_rasters(raster_stack = Fulanus_Ecorasters_dir$present,
-                     FUN_qlist = qlist(perf = my_tpc(tmax, size = mean(FulanusPhysiology$size))))
+  Perf_rasters <-
+    transform_rasters(raster_stack = Fulanus_Ecorasters_dir$present,
+                      FUN_qlist = qlist(perf = my_tpc(tmax, size = mean(FulanusPhysiology$size))))
 
-  expect_is(Perf_rasters, "RasterStack")
+  testthat::expect_is(Perf_rasters, "RasterStack")
 
-  expect_equal(sum(Perf_rasters[[1]]@data@values), -120683580)
+  testthat::expect_equal(sum(Perf_rasters[[1]]@data@values), -120683580)
 
-  expect_equal(names(Perf_rasters)[[1]], "perf_1")
+  testthat::expect_equal(names(Perf_rasters)[[1]], "perf_1")
 
 })

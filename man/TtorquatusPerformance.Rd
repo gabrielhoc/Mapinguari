@@ -4,7 +4,8 @@
 \name{TtorquatusPerformance}
 \alias{TtorquatusPerformance}
 \title{Running speed achieved by 72 *Tropidurus torquatus* lizards in 274 trials under different temperatures.}
-\format{A data frame with 274 rows and 6 variables:
+\format{
+A data frame with 274 rows and 6 variables:
 \describe{
   \item{species}{species name}
   \item{id}{individual identity of the lizard perform}
@@ -13,7 +14,8 @@
   \item{size}{lizard body size, in centimeters}
   \item{site}{place where lizard was collected}
   ...
-}}
+}
+}
 \usage{
 TtorquatusPerformance
 }

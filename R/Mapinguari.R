@@ -10,13 +10,7 @@
 #'   \item \code{\link{get_rasters}}
 #'   \item \code{\link{multi_extract}}
 #'   \item \code{\link{transform_rasters}}
-#'   \item \code{\link{daylengthFUN}}
-#'   \item \code{\link{PETFUN}}
-#'   \item \code{\link{AETFUN}}
-#'   \item \code{\link{sradFUN}}
 #'   \item \code{\link{sin_h}}
-#'   \item \code{\link{PC2FMFUN}}
-#'   \item \code{\link{rhFUN}}
 #'   }
 #'
 #' @docType package

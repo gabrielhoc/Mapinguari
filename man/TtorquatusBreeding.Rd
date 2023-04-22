@@ -4,7 +4,8 @@
 \name{TtorquatusBreeding}
 \alias{TtorquatusBreeding}
 \title{Breeding status of *Tropidurus torquatus* lizards at 15 locations in Brazil during each month of the year.}
-\format{A data frame with 15 rows and 14 variables:
+\format{
+A data frame with 15 rows and 14 variables:
 \describe{
   \item{Lon}{Longitude of occurrence records in decimal degrees}
   \item{Lat}{Latitude of occurrence records in decimal degrees}
@@ -21,7 +22,8 @@
   \item{November}{Binary breeding status at each location for the month of November, 1 means breeding, 0 means not breeding}
   \item{December}{Binary breeding status at each location for the month of December, 1 means breeding, 0 means not breeding}
   ...
-}}
+}
+}
 \usage{
 TtorquatusBreeding
 }

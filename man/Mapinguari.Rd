@@ -3,7 +3,6 @@
 \docType{package}
 \name{Mapinguari}
 \alias{Mapinguari}
-\alias{Mapinguari-package}
 \title{Mapinguari: Tools for process-based biogeographical analysis.}
 \description{
 Mapinguari provides solutions for incorporating biological processes in biogeographical analysis.
@@ -17,13 +16,7 @@ Mapinguari provides solutions for incorporating biological processes in biogeogr
   \item \code{\link{get_rasters}}
   \item \code{\link{multi_extract}}
   \item \code{\link{transform_rasters}}
-  \item \code{\link{daylengthFUN}}
-  \item \code{\link{PETFUN}}
-  \item \code{\link{AETFUN}}
-  \item \code{\link{sradFUN}}
   \item \code{\link{sin_h}}
-  \item \code{\link{PC2FMFUN}}
-  \item \code{\link{rhFUN}}
   }
 }
 

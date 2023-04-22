@@ -4,8 +4,14 @@
 \alias{multi_extract}
 \title{Gets values from multiple rasters.}
 \usage{
-multi_extract(raster_path, coord, folders = NULL, files = NULL,
-  layers = NULL, ncores = 1)
+multi_extract(
+  raster_path,
+  coord,
+  folders = NULL,
+  files = NULL,
+  layers = NULL,
+  ncores = 1
+)
 }
 \arguments{
 \item{raster_path}{character. Path to the folder with raster folders.}

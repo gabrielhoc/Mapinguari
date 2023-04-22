@@ -4,7 +4,8 @@
 \name{TtorquatusOperative}
 \alias{TtorquatusOperative}
 \title{Operative temperatures of multiple microhabitats at 6 localities in Brazil from 2014 to 2016.}
-\format{A data frame with 915684 rows and 13 variables:
+\format{
+A data frame with 915684 rows and 13 variables:
 \describe{
   \item{site}{place where temperatures were collected}
   \item{description}{description of site}
@@ -19,7 +20,8 @@
   \item{minute}{minute of sampling}
   \item{t_air_max}{maximum air temperature of the day at nearest weather station, in degrees Celsius}
   ...
-}}
+}
+}
 \usage{
 TtorquatusOperative
 }

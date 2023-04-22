@@ -35,19 +35,19 @@ test_that("get_rasters works for different raster inputs", {
 #      alert = 1)
 
 #  expect_is(Fulanus_Ecorasters_download, "list")
-  expect_is(Fulanus_Ecorasters_dir, "list")
+  testthat::expect_is(Fulanus_Ecorasters_dir, "list")
 #  expect_is(Fulanus_Ecorasters_list, "list")
 
 #  expect_is(Fulanus_Ecorasters_download[[1]], "RasterStack")
-  expect_is(Fulanus_Ecorasters_dir[[1]], "RasterStack")
+  testthat::expect_is(Fulanus_Ecorasters_dir[[1]], "RasterStack")
 #  expect_is(Fulanus_Ecorasters_list[[1]], "RasterStack")
 
 #  expect_equal(sum(Fulanus_Ecorasters_download[[1]][[1]]@data@values), 426947)
-  expect_equal(sum(Fulanus_Ecorasters_dir[[1]][[1]]@data@values), 426947)
+  testthat::expect_equal(sum(Fulanus_Ecorasters_dir[[1]][[1]]@data@values), 426947)
 #  expect_equal(sum(Fulanus_Ecorasters_list[[1]][[1]]@data@values), 426947)
 
 #  expect_equal(names(Fulanus_Ecorasters_download[[1]])[[1]], "prec_1")
-  expect_equal(names(Fulanus_Ecorasters_dir[[1]])[[1]], "prec_1")
+  testthat::expect_equal(names(Fulanus_Ecorasters_dir[[1]])[[1]], "prec_1")
 #  expect_equal(names(Fulanus_Ecorasters_list[[1]])[[1]], "prec_1")
 
 })

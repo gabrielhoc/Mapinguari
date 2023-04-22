@@ -133,13 +133,13 @@ get_predict <- function(
   rankAIC <- try(rank(dAIC), silent = TRUE)
   rankBIC <- try(rank(dBIC), silent = TRUE)
 
-  if (class(logLik) == 'try-error' | class(logLik) == 'character') logLik <- NA
-  if (class(AIC) == 'try-error' | class(AIC) == 'character') AIC <- NA
-  if (class(BIC) == 'try-error' | class(BIC) == 'character') BIC <- NA
-  if (class(dAIC) == 'try-error' | class(dAIC) == 'character') dAIC <- NA
-  if (class(dBIC) == 'try-error' | class(dBIC) == 'character') dBIC <- NA
-  if (class(rankAIC) == 'try-error' | class(rankAIC) == 'character') rankAIC <- NA
-  if (class(rankBIC) == 'try-error' | class(rankBIC) == 'character') rankBIC <- NA
+  if (inherits(logLik, 'try-error')| inherits(logLik, 'character')) logLik <- NA
+  if (inherits(AIC, 'try-error')| inherits(AIC, 'character')) AIC <- NA
+  if (inherits(BIC, 'try-error')| inherits(BIC, 'character')) BIC <- NA
+  if (inherits(dAIC, 'try-error')| inherits(dAIC, 'character')) dAIC <- NA
+  if (inherits(dBIC, 'try-error')| inherits(dBIC, 'character')) dBIC <- NA
+  if (inherits(rankAIC, 'try-error')| inherits(rankAIC, 'character')) rankAIC <- NA
+  if (inherits(rankBIC, 'try-error')| inherits(rankBIC, 'character')) rankBIC <- NA
 
   output_stats <-
     data.frame(logLik = logLik, AIC = AIC, BIC = BIC, dAIC, dBIC, rankAIC, rankBIC)

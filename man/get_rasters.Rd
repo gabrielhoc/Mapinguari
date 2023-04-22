@@ -4,9 +4,15 @@
 \alias{get_rasters}
 \title{Retrieve and organize spatial rasters.}
 \usage{
-get_rasters(var = NULL, scenario = NULL, raster_path = NULL,
-  ext = c(-180, 180, -60, 90), coord_col = c("Lon", "Lat"),
-  margin = 0, separator = "_")
+get_rasters(
+  var = NULL,
+  scenario = NULL,
+  raster_path = NULL,
+  ext = c(-180, 180, -60, 90),
+  coord_col = c("Lon", "Lat"),
+  margin = 0,
+  separator = "_"
+)
 }
 \arguments{
 \item{var}{character. Names of variables to be loaded.}
@@ -31,6 +37,8 @@ Returns a list of raster stacks for the variables required, organized by year/sc
 }
 \examples{
 \dontrun{
+# replace rasterpath with the directory on your computer containing worldclim data
+
 Fulanus_Ecorasters_present <-
   get_rasters(
     var = c('prec', 'tmin', 'tmax'),

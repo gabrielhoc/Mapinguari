@@ -4,8 +4,13 @@
 \alias{clean_points}
 \title{Clean occurrence records}
 \usage{
-clean_points(coord, merge_dist, coord_col = c("Lon", "Lat"),
-  filter_layer = NULL, na.rm = FALSE)
+clean_points(
+  coord,
+  merge_dist,
+  coord_col = c("Lon", "Lat"),
+  filter_layer = NULL,
+  na.rm = FALSE
+)
 }
 \arguments{
 \item{coord}{data.frame. Data frame containing longitudes (Lon) and latitudes (Lat) of occurrence records of a species.}

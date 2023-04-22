@@ -4,13 +4,15 @@
 \name{TtorquatusDistribution}
 \alias{TtorquatusDistribution}
 \title{359 occurrence records of *Tropidurus torquatus* in Brazil}
-\format{A data frame with 359 rows and 3 variables:
+\format{
+A data frame with 359 rows and 3 variables:
 \describe{
   \item{species}{species name}
   \item{Lon}{Longitude of occurrence point}
   \item{Lat}{Latitude of occurrence point}
   ...
-}}
+}
+}
 \usage{
 TtorquatusDistribution
 }
