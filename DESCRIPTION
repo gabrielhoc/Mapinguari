@@ -5,7 +5,7 @@ Version: 2.0.0
 Authors@R: c(person("Gabriel", "Caetano", email = "gabrielhoc@gmail.com", role = c("aut", "cre")),
              person("Juan", "Santos", email = "infraguttatus@gmail.com", role = c("aut")),
              person("Barry", "Sinervo", email = "lizardrps@gmail.com", role = c("aut")))
-Description: Facilitates the incorporation of biological processes in biogeographical analyses. It offers conveniences in fitting, comparing and extrapolating models of biological processes such as physiology and phenology. These spatial extrapolations can be informative by themselves, but also complement traditional correlative species distribution models, by mixing environmental and process-based predictors. Caetano et al (2020) <doi:https://doi.org/10.1111/oik.07123>.
+Description: Facilitates the incorporation of biological processes in biogeographical analyses. It offers conveniences in fitting, comparing and extrapolating models of biological processes such as physiology and phenology. These spatial extrapolations can be informative by themselves, but also complement traditional correlative species distribution models, by mixing environmental and process-based predictors. Caetano et al (2020) <doi:10.1111/oik.07123>.
 Depends: R (>= 3.5)
 License: GPL-2
 Encoding: UTF-8
