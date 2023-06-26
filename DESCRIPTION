@@ -16,11 +16,8 @@ Suggests:
     geosphere,
     mgcv
 Imports:
-    dplyr,
     magrittr,
     parallel,
     raster,
-    rlang,
-    stringr,
-    testthat
+    stringr
 RoxygenNote: 7.2.1
