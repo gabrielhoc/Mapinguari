@@ -1,7 +1,7 @@
 Package: Mapinguari
 Type: Package
 Title: Process-Based Biogeographical Analysis
-Version: 2.0.0
+Version: 2.0.1
 Authors@R: c(person("Gabriel", "Caetano", email = "gabrielhoc@gmail.com", role = c("aut", "cre")),
              person("Juan", "Santos", email = "infraguttatus@gmail.com", role = c("aut")),
              person("Barry", "Sinervo", email = "lizardrps@gmail.com", role = c("aut")))
@@ -16,8 +16,11 @@ Suggests:
     geosphere,
     mgcv
 Imports:
+    dplyr,
     magrittr,
     parallel,
     raster,
-    stringr
+    rlang,
+    stringr,
+    testthat
 RoxygenNote: 7.2.1
