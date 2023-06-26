@@ -20,7 +20,6 @@ Imports:
     magrittr,
     parallel,
     raster,
-    rgdal,
     rlang,
     stringr,
     testthat
